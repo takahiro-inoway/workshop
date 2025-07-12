@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pythonでマインクラフトワーク</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS カスタム設定 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            yamabuki: '#FFCC00', // 山吹色
+            yamabukiLight: '#FFF7D9', // 山吹色の明るいシェード
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Vue 3 CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    /* Interフォントの代わりに、より一般的なサンセリフフォントを使用 */
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+      background-color: #f0f2f5;
+      /* デフォルトの背景色 */
+      overflow-x: hidden;
+      /* 横スクロールバーを非表示にする */
+    }
+
+    /* 山吹色をボディの背景に適用 */
+    body {
+      background-color: #FFF7D9;
+      /* yamabukiLight */
+      position: relative;
+      /* ::beforeの基準点とする */
+    }
+
+    /* 新しいスクロールする絵文字背景 */
+    body::before {
+      content: "⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮\A⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮⛏️🌳💎✨🎮";
+      /* 複数の絵文字と改行 */
+      position: fixed;
+      /* 固定位置 */
+      top: -50%;
+      /* 初期位置調整（上方向にはみ出す） */
+      left: -50%;
+      /* 初期位置調整（左方向にはみ出す） */
+      width: 200%;
+      /* 画面全体を覆うように広げる */
+      height: 200%;
+      /* 画面全体を覆うように広げる */
+      z-index: -1;
+      /* 他のコンテンツの下に配置 */
+      font-size: 60px;
+      /* 絵文字のサイズ */
+      line-height: 1.8;
+      /* 行の高さ */
+      white-space: pre;
+      /* スペースと改行を保持 */
+      opacity: 0.5;
+      /* 透明度を上げて控えめに */
+      animation: diagonal-scroll 20s linear infinite;
+      /* ゆっくりとした斜めスクロールアニメーション */
+      transform-origin: 0 0;
+      /* 変形の基準点を左上に設定 */
+    }
+
+    @keyframes diagonal-scroll {
+      from {
+        transform: translate(0, 0);
+        /* 開始位置 */
+      }
+
+      to {
+        transform: translate(50%, 50%);
+        /* 終了位置 (右下へ移動) */
+      }
+    }
+
+    .code-block {
+      background-color: #2d2d2d;
+      /* ダークな背景色 */
+      color: #f8f8f2;
+      /* 明るい文字色 */
+      padding: 1rem;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+      /* 横スクロールが必要な場合に表示 */
+      position: relative;
+      /* コード表示に適したフォント */
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .copy-button {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      background-color: #4a5568;
+      /* ボタンの背景色 */
+      color: white;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.375rem;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: background-color 0.2s ease-in-out;
+      border: none;
+      /* デフォルトのボーダーを削除 */
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      /* 軽い影を追加 */
+    }
+
+    .copy-button:hover {
+      background-color: #2d3748;
+      /* ホバー時の背景色 */
+    }
+
+    .copy-message {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #4CAF50;
+      /* 緑色の背景 */
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      /* 影を追加 */
+    }
+
+    .copy-message.show {
+      opacity: 1;
+    }
+
+    /* 絵文字の回転アニメーション */
+    @keyframes slow-rotate {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .animate-slow-spin {
+      animation: slow-rotate 10s linear infinite;
+      /* 10秒かけてゆっくり回転 */
+    }
+
+    /* 吹き出しのスタイル */
+    .speech-bubble {
+      position: relative;
+      background: #ffffff;
+      border-radius: .4em;
+      padding: 1.5rem;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .speech-bubble:after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border: 20px solid transparent;
+      border-top-color: #ffffff;
+      border-bottom: 0;
+      margin-left: -20px;
+      margin-bottom: -20px;
+    }
+
+    /* キャラクター画像のスタイル */
+    .character-image {
+      width: 120px;
+      /* キャラクター画像の幅 */
+      height: 120px;
+      /* キャラクター画像の高さ */
+      object-fit: contain;
+      /* 画像が歪まないように調整 */
+      border-radius: 50%;
+      /* 丸い画像 */
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      background-color: #fff;
+      /* 背景色を追加 */
+      padding: 5px;
+      /* パディングを追加 */
+    }
+  </style>
+</head>
+
+<body class="p-4 md:p-8">
+  <div id="app" class="max-w-6xl mx-auto bg-white shadow-lg rounded-lg p-6 md:p-8">
+    <!-- キャラクターと吹き出しのセクション -->
+    <div class="flex flex-col items-center mb-12">
+      <img src="img/face.jpg" alt="キャラクター" class="character-image mb-4">
+      <img src="img/1.jpg" alt="ワークの挿絵" class="rounded-lg shadow-md w-full md:w-3/4 lg:w-2/3 h-auto max-w-full">
+      <div class="speech-bubble text-center max-w-2xl mx-auto">
+        <p class="text-lg text-gray-700 mb-2">
+          マインクラフトというゲームの裏側には、
+          すべてを可能にする「コード」という言語が存在します。
+        </p>
+        <p class="text-lg text-gray-700 mb-2">
+          普段何気なく遊んでいるその世界を、
+          今日は自分自身の手でハックしてみましょう。
+          自分だけのルールを実装し、誰も見たことがない機能を
+          生み出す——それがプログラミングの本当の力です。
+        </p>
+        <p class="text-lg text-gray-700 font-bold">
+          あなたの世界観をつくる、
+          はじめの一歩を今踏み出しましょう！
+        </p>
+      </div>
+    </div>
+
+    <p class="text-lg text-gray-700 mb-8 text-center">
+      このページでは、Pythonを使ってマインクラフトをプログラミングするためのステップバイステップのガイドを提供します。
+      各ステップのコードをコピーして、ご自身の環境で試してみましょう。
+    </p>
+
+    <div v-for="(sample, index) in codeSamples" :key="sample.id">
+      <div style="width: 100%; text-align: center;" class="text-6xl mr-4">・</div>
+      <div style="width: 100%; text-align: center;" class="text-6xl mr-4">⛏️</div>
+      <div style="width: 100%; text-align: center;" class="text-6xl mr-4">・</div>
+      <div style="width: 100%; text-align: center;" class="text-6xl mr-4">🌳</div>
+      <div style="width: 100%; text-align: center;" class="text-6xl mr-4">・</div>
+      <div style="width: 100%; text-align: center;" class="text-6xl mr-4">💎</div>
+      <div style="width: 100%; text-align: center;" class="text-6xl mr-4">・</div>
+      <div class="mb-20 p-6 bg-gray-50 rounded-lg shadow-md border-t-4 border-yamabuki">
+
+        <div class="flex items-center mb-4">
+          <span class="text-6xl mr-4 animate-slow-spin">{{ sample.emoji }}</span>
+          <h2 class="text-2xl font-semibold text-gray-800">
+            {{ sample.title }}
+          </h2>
+        </div>
+        <p class="text-gray-700 mb-4 leading-relaxed">
+          {{ sample.description }}
+        </p>
+
+        <!-- 各ワークごとの挿絵のダミーイメージタグ -->
+        <div class="flex justify-center my-6">
+          <img :src="`img/${index + 3}.jpg`" alt="ワークの挿絵" class="rounded-lg shadow-md w-full h-auto max-w-full">
+        </div>
+
+        <div class="code-block">
+          <pre><code class="language-python">{{ sample.code }}</code></pre>
+          <button @click="copyCode(sample.code)" class="copy-button">
+            コピー
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- コードコピー時のメッセージ表示領域 -->
+    <div ref="copyMessage" class="copy-message">
+      コードがコピーされました！
+    </div>
+
+    <p class="text-lg text-gray-700 mt-8 text-center">
+      これで基本的なマインクラフトのプログラミングが学べました。
+      色々なブロックを試したり、もっと複雑な構造を作ってみましょう！
+    </p>
+  </div>
+
+  <script>
+    const { createApp, ref } = Vue;
+
+    createApp({
+      setup() {
+        const copyMessage = ref(null);
+
+        // ワーク用のコードサンプルデータ
+        const codeSamples = [
+          {
+            id: 'sample_1',
+            title: 'ステップ1: マインクラフトに接続してチャットメッセージを送る',
+            description: 'このコードは、Pythonからマインクラフトの世界に接続し、「こんにちは、マインクラフト!」というチャットメッセージをゲーム内に表示します。',
+            emoji: '💬', // Speech Bubble
+            code: `# sample_1.py
+
+# マインクラフトに接続するプログラム
+from mcpi.minecraft import Minecraft
+
+# マインクラフトに接続
+mc = Minecraft.create()
+
+# チャットメッセージを送信
+mc.postToChat("こんにちは、マインクラフト!")`
+          },
+          {
+            id: 'sample_2',
+            title: 'ステップ2: 自分の位置を取得する',
+            description: 'このコードは、マインクラフト内でプレイヤーの現在位置（X, Y, Z座標）を取得し、それをPythonのコンソールに表示します。',
+            emoji: '📍', // Pushpin
+            code: `# sample_2.py
+
+from mcpi.minecraft import Minecraft
+
+mc = Minecraft.create()
+
+# 自分の位置を取得
+pos = mc.player.getTilePos()
+
+# 位置を表示
+print("あなたの位置:")
+print(pos.x)
+print(pos.y)
+print(pos.z)`
+          },
+          {
+            id: 'sample_3',
+            title: 'ステップ3: 自分の目の前にブロックを置く',
+            description: 'このコードは、プレイヤーの現在位置から少し離れた場所（X軸方向に+3）に、指定した種類のブロック（ここではID:1の石ブロック）を1つ配置します。',
+            emoji: '🧱', // Brick
+            code: `# sample_3.py
+
+from mcpi.minecraft import Minecraft
+mc = Minecraft.create()
+
+# 自分の位置を取得
+pos = mc.player.getTilePos()
+
+# 自分の目の前にブロックを置く (1は石ブロックのID)
+mc.setBlock(pos.x + 3, pos.y, pos.z, 1)`
+          },
+          {
+            id: 'sample_4',
+            title: 'ステップ4: 色々なブロックを置く',
+            description: 'このコードは、異なる種類のブロック（石、草ブロック、金ブロック、ダイヤモンドブロック）をプレイヤーの目の前に並べて配置します。それぞれのブロックIDに注目してください。',
+            emoji: '🎨', // Palette
+            code: `# sample_4.py
+
+from mcpi.minecraft import Minecraft
+
+mc = Minecraft.create()
+
+# 自分の位置を取得
+pos = mc.player.getTilePos()
+
+# 色々なブロックを置く
+mc.setBlock(pos.x + 3, pos.y, pos.z, 1)   # 石 (ID: 1)
+mc.setBlock(pos.x + 3, pos.y, pos.z + 1, 2)   # 草ブロック (ID: 2)
+mc.setBlock(pos.x + 3, pos.y, pos.z + 2, 41)   # 金ブロック (ID: 41)
+mc.setBlock(pos.x + 3, pos.y, pos.z + 3, 57)   # ダイヤモンドブロック (ID: 57)`
+          },
+          {
+            id: 'sample_5_0',
+            title: 'ステップ5: ブロックを縦に積み上げる',
+            description: '繰り返し処理について知りましょう！',
+            emoji: '⬆️', // Up Arrow
+            code: `次のワークを見てみましょう！`
+          },
+          {
+            id: 'sample_5',
+            title: 'ステップ5: ブロックを縦に積み上げる',
+            description: 'このコードは、forループを使って、プレイヤーの目の前に石ブロックを縦に3つ積み上げます。Y座標が変化することを確認してください。',
+            emoji: '⬆️', // Up Arrow
+            code: `# sample_5.py
+
+from mcpi.minecraft import Minecraft
+
+mc = Minecraft.create()
+
+# 自分の位置を取得
+pos = mc.player.getTilePos()
+
+# 縦に積み上げる (Y座標を0から2まで変化させる)
+for y in range(3):
+    mc.setBlock(pos.x + 3, pos.y + y, pos.z, 1)`
+          },
+          {
+            id: 'sample_6',
+            title: 'ステップ6: 複数のブロックを配置して壁を作る',
+            description: 'このコードは、二重のforループを使って、プレイヤーの目の前に3x3の石の壁を作ります。Y座標とZ座標が同時に変化することに注目してください。',
+            emoji: '🏰', // Castle
+            code: `# sample_6.py
+
+from mcpi.minecraft import Minecraft
+
+mc = Minecraft.create()
+
+# 自分の位置を取得
+pos = mc.player.getTilePos()
+
+# 縦横にブロックを配置して壁を作る (3x3の壁)
+for y in range(3):
+    for z in range(3):
+        mc.setBlock(pos.x + 3, pos.y + y, pos.z + z, 1)`
+          },
+          {
+            id: 'sample_6_2',
+            title: 'ステップ6: 他のブロックでも試してみましょう！',
+            description: 'ブロックIDを変えて色々ためしてみましょう！',
+            emoji: '🏰', // Castle
+            code: `慣れてきたら繰り返し処理の回数を増やしてみましょう！
+どうやったら回数を増やせるでしょうか、、？考えてみましょう！`
+          },
+          {
+            id: 'sample_7',
+            title: 'ステップ7: プレイヤーをテレポートさせる',
+            description: 'このコードは、プレイヤーを現在の位置から少し後ろ（X軸方向に-3）にテレポートさせます。',
+            emoji: '✨', // Sparkles
+            code: `# sample_7.py
+
+from mcpi.minecraft import Minecraft
+
+mc = Minecraft.create()
+
+# 自分の位置を取得
+pos = mc.player.getTilePos()
+
+# プレイヤーをテレポート (X座標を-3移動)
+mc.player.setPos(pos.x - 3, pos.y, pos.z)`
+          },
+          {
+            id: 'sample_8',
+            title: 'ステップ8: ブロックを置いてからテレポートする',
+            description: 'このコードは、まず3x3の石の壁を作成し、その後プレイヤーを少し後ろにテレポートさせます。複数の処理を組み合わせる例です。',
+            emoji: '🔄', // Arrows clockwise
+            code: `# sample_8.py
+
+from mcpi.minecraft import Minecraft
+
+mc = Minecraft.create()
+
+# 自分の位置を取得
+pos = mc.player.getTilePos()
+
+# 縦横にブロックを配置して壁を作る (3x3の壁)
+for y in range(3):
+    for z in range(3):
+        mc.setBlock(pos.x + 3, pos.y + y, pos.z + z, 1)
+        
+# プレイヤーをテレポート (X座標を-3移動)
+mc.player.setPos(pos.x - 3, pos.y, pos.z)`
+          }
+        ];
+
+        // コードをクリップボードにコピーする関数
+        const copyCode = (code) => {
+          const textarea = document.createElement('textarea');
+          textarea.value = code;
+          // ユーザーに見えないようにtextareaを配置
+          textarea.style.position = 'fixed';
+          textarea.style.top = '0';
+          textarea.style.left = '0';
+          textarea.style.width = '1px';
+          textarea.style.height = '1px';
+          textarea.style.padding = '0';
+          textarea.style.border = 'none';
+          textarea.style.outline = 'none';
+          textarea.style.boxShadow = 'none';
+          textarea.style.background = 'transparent';
+
+          document.body.appendChild(textarea);
+          textarea.select(); // テキストを選択
+          try {
+            document.execCommand('copy'); // コピーコマンドを実行
+            if (copyMessage.value) {
+              copyMessage.value.classList.add('show'); // メッセージを表示
+              setTimeout(() => {
+                copyMessage.value.classList.remove('show'); // 2秒後にメッセージを非表示
+              }, 2000);
+            }
+          } catch (err) {
+            console.error('Failed to copy text: ', err); // エラーハンドリング
+            // エラーメッセージをユーザーに表示する代替手段を検討することも可能
+          } finally {
+            document.body.removeChild(textarea); // textareaを削除
+          }
+        };
+
+        return {
+          codeSamples,
+          copyCode,
+          copyMessage
+        };
+      }
+    }).mount('#app'); // Vueアプリを#app要素にマウント
+  </script>
+</body>
+
+</html>
+�
