@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>自己紹介サイト制作体験</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --primary-color: #264653;
+      --secondary-color: #e9c46a;
+      --text-color: #333333;
+      --background-color: #f5f5f5;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--background-color);
+      color: var(--text-color);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1200px;
+    }
+
+    .section {
+      padding: 8rem 2rem;
+      position: relative;
+    }
+
+    .section-heading {
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      margin-bottom: 1.5rem;
+      line-height: 1.2;
+      border-bottom: 3px solid var(--secondary-color);
+      padding-bottom: 0.5rem;
+      display: inline-block;
+    }
+
+    .text-box {
+      background-color: #f8f9fa;
+      border-left: 4px solid var(--secondary-color);
+      padding: 1.5rem;
+      margin-top: 2rem;
+      border-radius: 4px;
+    }
+
+    .mini-explanation {
+      background-color: #fff;
+      border: 1px solid #e0e0e0;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1.5rem;
+    }
+
+    .mini-explanation h4 {
+      font-weight: 600;
+      color: var(--primary-color);
+      margin-bottom: 0.5rem;
+      font-size: 1rem;
+    }
+
+    /* アニメーション */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fade-in {
+      animation: fadeIn 1s ease-out forwards;
+    }
+
+    @keyframes imageSlideIn {
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .image-animation {
+      animation: imageSlideIn 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    }
+
+    /* 新しい背景画像のためのスタイル */
+    .section {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      width: 150%;
+      height: 100%;
+      background-image: url('https://tech.tetsuzuki.me/img/school/22136057_m.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      opacity: 0.1;
+      z-index: -1;
+      pointer-events: none;
+      filter: grayscale(100%) brightness(1.2);
+    }
+
+    /* 左にずらす背景スタイル */
+    .section-bg-left::before {
+      transform: translateX(-20%);
+    }
+
+    /* 右にずらす背景スタイル */
+    .section-bg-right::before {
+      transform: translateX(20%);
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50">
+
+  <!-- ヒーローセクション -->
+  <div class="container mx-auto section section-bg-right flex items-center justify-center min-h-screen pt-24 pb-12">
+    <div class="text-center animate-fade-in">
+      <h1 class="text-6xl md:text-8xl font-extrabold text-gray-900 mb-6 tracking-tight">
+        自己紹介サイト
+      </h1>
+      <p class="text-xl md:text-2xl text-gray-600 max-w-2xl mx-auto">
+        君だけのクリエイティビティを形にする
+      </p>
+    </div>
+  </div>
+  <div class="w-full h-80 overflow-hidden relative">
+    <img src="image_1.jpg" alt="ウェブデザインのコンセプトイメージ" class="w-full h-full object-cover animate-fade-in image-animation">
+  </div>
+
+  <!-- 1. 企画・コンセプト設計 -->
+  <div class="container mx-auto section section-bg-left">
+    <div class="animate-fade-in" style="animation-delay: 0.5s;">
+      <h2 class="section-heading">1. 企画・コンセプト設計</h2>
+      <p class="text-lg text-gray-700 mt-8 mb-6 max-w-3xl">
+        優れたデザインは、単に見た目が美しいだけではありません。それは論理的な思考と明確な目的から生まれます。最初のステップは、君がWebサイトを通して「誰に」「何を」「どう伝えたいか」を定義することです。これを怠ると、方向性のないデザインになり、見る人に何も響きません。
+      </p>
+      <div class="grid md:grid-cols-2 gap-12 mt-16 items-center">
+        <div>
+          <h3 class="text-2xl font-semibold text-gray-800 mb-4">
+            ターゲットを定義する
+          </h3>
+          <p class="text-gray-700 mb-6">
+            自己紹介サイトの「ターゲット」とは、そのサイトを見てほしい相手のことです。例えば、大学の入試担当者、将来の就職先、または新しい仲間かもしれません。ターゲット像が明確になれば、サイトのトーンや言葉選び、見せるべきコンテンツが定まります。
+          </p>
+          <div class="mini-explanation">
+            <h4>ペルソナとは？</h4>
+            <p class="text-sm text-gray-600">
+              ターゲットの中でも、実在する人物のように詳細に設定した仮想の人物像のことです。年齢、趣味、悩み、目的などを具体的に描き出すことで、デザインの方向性がよりシャープになります。
+            </p>
+            <img src="image_2.jpg" alt="ペルソナのイメージ" class="w-24 h-auto rounded-full mx-auto mt-4 image-animation">
+          </div>
+        </div>
+        <div>
+          <img src="image_3.jpg" alt="ターゲットユーザーのペルソナイメージ" class="w-full h-auto rounded-lg image-animation">
+        </div>
+      </div>
+      <div class="grid md:grid-cols-2 gap-12 mt-20 items-center">
+        <div class="order-2 md:order-1">
+          <img src="image_4.jpg" alt="デザインコンセプトのイメージ" class="w-full h-auto rounded-lg image-animation">
+        </div>
+        <div class="order-1 md:order-2">
+          <h3 class="text-2xl font-semibold text-gray-800 mb-4">
+            デザインコンセプトとコンテンツ戦略
+          </h3>
+          <p class="text-gray-700 mb-6">
+            自分の個性や強みを表現するために、どのようなデザインにすべきか考えましょう。「シンプルでプロフェッショナル」「親しみやすくクリエイティブ」など、コンセプトを言葉で定義します。さらに、伝えるべき情報（経歴、スキル、作品）をどのように配置するか、コンテンツの構造を設計します。
+          </p>
+          <div class="mini-explanation">
+            <h4>情報アーキテクチャ（IA）とは？</h4>
+            <p class="text-sm text-gray-600">
+              ユーザーが求める情報に迷わずたどり着けるよう、Webサイト全体のコンテンツを構造化し、整理することです。優れたIAは、ユーザー体験（UX）を向上させるために不可欠な要素です。
+            </p>
+            <img src="image_5.jpg" alt="情報アーキテクチャのイメージ図" class="w-32 h-auto rounded-md mx-auto mt-4 image-animation">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 実践：デザインツールで形にしよう -->
+  <div class="container mx-auto section section-bg-right">
+    <div class="animate-fade-in" style="animation-delay: 1s;">
+      <h2 class="section-heading">2. 実践：デザインツールで形にしよう</h2>
+      <p class="text-lg text-gray-700 mt-8 mb-6 max-w-3xl">
+        コンセプトが固まったら、いよいよデザインツールを使って形にしていきます。この段階では、いきなり作り始めるのではなく、デザインの基礎原則を理解することが重要です。
+      </p>
+
+      <div class="grid lg:grid-cols-3 gap-8 mt-16">
+        <div class="bg-white p-8 rounded-lg shadow-sm border border-gray-200">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">
+            タイポグラフィの選定
+          </h3>
+          <p class="text-gray-700">
+            フォントはWebサイトの印象を大きく左右します。コンセプトに合わせて、読みやすく、かつ個性を表現できるフォントを選びましょう。本文には可読性の高いフォントを、タイトルには少しデザイン性のあるフォントを使い分けるのが一般的です。
+          </p>
+
+          <div class="mini-explanation">
+            <h4>タイポグラフィとは？</h4>
+            <p class="text-sm text-gray-600">
+              フォントの種類、サイズ、行間、文字間などを調整し、読みやすく、美しい文字組を追求する技術です。デザインの質を向上させる上で最も重要な要素の一つです。
+            </p>
+            <img src="image_6.jpg" alt="タイポグラフィのイメージ" class="w-full h-auto rounded-md mx-auto mt-4 image-animation">
+          </div>
+        </div>
+
+        <div class="bg-white p-8 rounded-lg shadow-sm border border-gray-200">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">
+            カラースキームの決定
+          </h3>
+          <p class="text-gray-700">
+            配色計画（カラースキーム）は、Webサイトのブランドイメージを形成します。メインカラー、アクセントカラー、背景色を３色程度に絞り、統一感のあるデザインを目指しましょう。色の持つ心理的な効果も考慮すると、よりプロフェッショナルな印象を与えられます。
+          </p>
+          <img src="image_7.jpg" alt="カラースキームの例" class="w-full h-auto rounded-lg image-animation mt-6">
+
+          <div class="mini-explanation">
+            <h4>カラースキームとは？</h4>
+            <p class="text-sm text-gray-600">
+              ウェブサイト全体で使用する色の組み合わせのことです。ブランドの雰囲気を伝え、視覚的な統一感を生み出すために、事前に計画的に決定します。
+            </p>
+          </div>
+        </div>
+
+        <div class="bg-white p-8 rounded-lg shadow-sm border border-gray-200">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">
+            視覚的階層（Visual Hierarchy）の構築
+          </h3>
+          <p class="text-gray-700">
+            ユーザーにまず何を読んでもらいたいか、重要度に応じて要素を配置する技術です。タイトルのサイズを大きくする、重要なボタンを明るい色にするなど、強弱をつけることで、ユーザーの視線を意図した順序で導くことができます。
+          </p>
+
+          <div class="mini-explanation">
+            <h4>視覚的階層（Visual Hierarchy）とは？</h4>
+            <p class="text-sm text-gray-600">
+              デザイン要素に優先順位をつけ、ユーザーに最も重要な情報が直感的に伝わるようにレイアウトを構築するデザイン原則です。
+            </p>
+            <img src="image_8.jpg" alt="視覚的階層のイメージ" class="w-full h-auto rounded-md mx-auto mt-4 image-animation">
+          </div>
+        </div>
+      </div>
+
+      <div class="w-full flex justify-center mt-20">
+        <img src="image_9.jpg" alt="ポートフォリオのレイアウト例" class="w-full max-w-4xl h-auto rounded-lg image-animation">
+      </div>
+
+      <p class="text-lg text-gray-700 mt-12 max-w-3xl mx-auto text-center">
+        これらの原則を頭に入れながら、デザインツールを使って君のアイデアを具現化していきましょう！
+      </p>
+    </div>
+  </div>
+
+  <!-- 3. 発表：フィードバックと成長 -->
+  <div class="container mx-auto section section-bg-left">
+    <div class="animate-fade-in" style="animation-delay: 1.5s;">
+      <h2 class="section-heading">3. 発表：フィードバックと成長</h2>
+      <p class="text-lg text-gray-700 mt-8 mb-6 max-w-3xl">
+        完成した作品をクラスメイトと共有し、フィードバックを受けましょう。デザインに「正解」はありません。しかし、他者の視点から自分の作品を客観的に見ることで、新たな気づきや改善点が見つかります。
+      </p>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mt-12">
+        <div class="bg-white p-8 rounded-lg shadow-sm border border-gray-200">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">
+            デザイン意図の言語化
+          </h3>
+          <p class="text-gray-700">
+            なぜこの色を選んだのか、なぜこの配置にしたのか。自分のデザインを言葉で説明することで、思考プロセスが整理され、今後のデザイン制作にも活かすことができます。
+          </p>
+          <img src="image_10.jpg" alt="言語化のイメージ" class="w-full h-auto rounded-md mx-auto mt-4 image-animation">
+        </div>
+        <div class="bg-white p-8 rounded-lg shadow-sm border border-gray-200">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">
+            他者からの学び
+          </h3>
+          <p class="text-gray-700">
+            他の人の作品を見ることで、自分にはなかったアイデアやアプローチを発見できます。互いの作品から学び合い、デザインの引き出しを増やしましょう。
+          </p>
+          <img src="image_11.jpg" alt="学びのイメージ" class="w-full h-auto rounded-md mx-auto mt-4 image-animation">
+        </div>
+        <div class="bg-white p-8 rounded-lg shadow-sm border border-gray-200">
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">
+            反復（Iteration）の重要性
+          </h3>
+          <p class="text-gray-700">
+            デザインは一度作って終わりではありません。フィードバックを元に改善を重ねる「反復」が、より良いデザインを生み出します。今日の経験は、その第一歩です。
+          </p>
+          <img src="image_12.jpg" alt="反復のイメージ" class="w-full h-auto rounded-md mx-auto mt-4 image-animation">
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
