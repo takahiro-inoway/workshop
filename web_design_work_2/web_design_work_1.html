@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ウェブデザイン体験授業</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Noto+Sans+JP:wght@300;400;600;700&display=swap');
+
+    body {
+      font-family: 'Noto Sans JP', 'Inter', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #1a202c;
+      overflow-x: hidden;
+    }
+
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .slide-content {
+      max-width: 1200px;
+      width: 90%;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      padding: 4rem;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .slide-title {
+      font-size: 3rem;
+      font-weight: 800;
+      color: #2d3748;
+      margin-bottom: 2rem;
+      position: relative;
+    }
+
+    .slide-title::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 0;
+      width: 100px;
+      height: 4px;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+    }
+
+    .tips-box {
+      background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+      border-left: 4px solid #667eea;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      position: relative;
+    }
+
+    .tips-box::before {
+      content: '💡';
+      font-size: 1.5rem;
+      position: absolute;
+      top: 1rem;
+      right: 1.5rem;
+    }
+
+    .cta-button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 1rem 2rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      display: inline-block;
+      text-decoration: none;
+      transform: translateY(0);
+    }
+
+    .cta-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+    }
+
+    .step-card {
+      background: white;
+      border: 2px solid #e2e8f0;
+      padding: 2rem;
+      margin: 1rem 0;
+      transition: all 0.3s ease;
+    }
+
+    .step-card:hover {
+      border-color: #667eea;
+      transform: translateY(-2px);
+    }
+
+    .accent-text {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 700;
+    }
+
+    .slide-number {
+      position: absolute;
+      top: 2rem;
+      right: 2rem;
+      font-size: 0.875rem;
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    .grid-pattern {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      opacity: 0.05;
+      background-image:
+        linear-gradient(rgba(102, 126, 234, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(102, 126, 234, 0.1) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- スライド1: はじめに -->
+  <div class="slide">
+    <div class="grid-pattern"></div>
+    <div class="slide-content text-center">
+      <div class="slide-number">01 / 05</div>
+      <h1 class="text-6xl font-extrabold text-gray-900 mb-6">
+        ウェブデザイン<br>
+        <span class="accent-text">体験授業</span>
+      </h1>
+      <p class="text-2xl text-gray-600 mb-8">
+        プロのデザイナーと同じ思考プロセスで<br>
+        実際のWebサイトを作ってみよう
+      </p>
+
+      <div class="tips-box text-left">
+        <h3 class="text-xl font-bold text-gray-800 mb-3">📖 ウェブデザインとは？</h3>
+        <p class="text-gray-700 leading-relaxed">
+          ウェブデザインとは、単に「見た目をきれいにする」だけではありません。<br>
+          <strong>ユーザー体験（UX）</strong>を考慮し、情報を分かりやすく整理し、<br>
+          目的達成を支援するための総合的な設計プロセスです。
+        </p>
+      </div>
+
+      <p class="text-lg text-gray-700 mt-8">
+        今日は、実在する商品の<strong class="accent-text">ランディングページ</strong>を<br>
+        プロと同じ手順で作ってみます
+      </p>
+    </div>
+  </div>
+
+  <!-- スライド2: プロジェクトのスタート -->
+  <div class="slide">
+    <div class="grid-pattern"></div>
+    <div class="slide-content">
+      <div class="slide-number">02 / 05</div>
+      <h2 class="slide-title">クライアントブリーフィング</h2>
+      <p class="text-xl text-gray-700 mb-8">
+        デザイナーの仕事は、まずクライアントの<strong>真のニーズ</strong>を理解することから始まります。<br>
+        今日のクライアントは、革新的なドライヤーを開発したスタートアップ企業です。
+      </p>
+
+      <div class="step-card">
+        <h3 class="text-2xl font-bold text-gray-800 mb-4">🎯 プロジェクト概要</h3>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <p class="mb-2"><strong class="accent-text">商品名：</strong>フワリ エアー ドライヤー</p>
+            <p class="mb-2"><strong class="accent-text">価格帯：</strong>¥15,000 - 20,000</p>
+            <p class="mb-2"><strong class="accent-text">発売時期：</strong>来月予定</p>
+          </div>
+          <div>
+            <p class="mb-2"><strong class="accent-text">主な特徴：</strong>軽量（300g）、速乾、美髪効果</p>
+            <p class="mb-2"><strong class="accent-text">ターゲット：</strong>18-25歳の大学生・新社会人</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="tips-box">
+        <h3 class="text-xl font-bold text-gray-800 mb-3">🎨 ランディングページ（LP）とは？</h3>
+        <p class="text-gray-700 leading-relaxed">
+          ユーザーが検索やSNS広告から<strong>最初にたどり着くページ</strong>のこと。<br>
+          商品購入や資料請求など、<strong>明確な行動（コンバージョン）</strong>を促すことが目的。<br>
+          一般的なWebサイトとは違い、<strong>1つのゴール</strong>に向かって設計します。
+        </p>
+      </div>
+
+      <div class="text-center mt-8">
+        <a href="https://example-landing-page.com" target="_blank" class="cta-button">
+          📱 参考：サンプルのWebページを見てみましょう！
+        </a>
+        <p class="text-sm text-gray-600 mt-2">* 実際のプロダクトのLPサンプル</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- スライド3: 戦略設計フェーズ -->
+  <div class="slide">
+    <div class="grid-pattern"></div>
+    <div class="slide-content">
+      <div class="slide-number">03 / 05</div>
+      <h2 class="slide-title">戦略設計：ユーザー中心で考える</h2>
+      <p class="text-xl text-gray-700 mb-8">
+        いきなりデザインツールを開くのは<strong>NG</strong>！<br>
+        まずは<strong>戦略的思考</strong>でプロジェクトの土台を固めましょう。
+      </p>
+
+      <div class="grid lg:grid-cols-2 gap-8">
+        <div class="step-card">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">👤 ペルソナ設計</h3>
+          <p class="text-gray-700 mb-4">「忙しい朝の大学生」って具体的にどんな人？</p>
+          <ul class="text-sm text-gray-600 space-y-2">
+            <li>• 1限に間に合わせるため朝は時間との勝負</li>
+            <li>• SNS映えを意識、おしゃれには手を抜きたくない</li>
+            <li>• でも高価すぎる商品は手が出ない</li>
+            <li>• スマホで情報収集、口コミを重視</li>
+          </ul>
+        </div>
+
+        <div class="step-card">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">🎯 価値提案</h3>
+          <p class="text-gray-700 mb-4">なぜこの商品を選ぶべき？</p>
+          <ul class="text-sm text-gray-600 space-y-2">
+            <li>• <strong>時短：</strong>従来の半分の時間で乾く</li>
+            <li>• <strong>軽量：</strong>腕が疲れない、旅行にも便利</li>
+            <li>• <strong>美髪：</strong>マイナスイオンでツヤ髪に</li>
+            <li>• <strong>価格：</strong>学生にも手が届く価格帯</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tips-box">
+        <h3 class="text-xl font-bold text-gray-800 mb-3">🧠 デザイン思考とは？</h3>
+        <p class="text-gray-700 leading-relaxed">
+          ユーザーの<strong>共感（Empathize）</strong>から始まり、<strong>問題定義→アイデア創出→プロトタイプ→テスト</strong>の<br>
+          5段階で進める人間中心の問題解決手法。GoogleやAppleなど世界的企業も採用している思考プロセスです。
+        </p>
+      </div>
+
+      <div class="mt-8">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">🎨 ビジュアル方向性の決定</h3>
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="step-card text-center">
+            <h4 class="font-bold text-gray-800">カラー</h4>
+            <p class="text-sm text-gray-600">清潔感のある白×アクセントカラー</p>
+          </div>
+          <div class="step-card text-center">
+            <h4 class="font-bold text-gray-800">トーン</h4>
+            <p class="text-sm text-gray-600">親しみやすく、でも信頼できる</p>
+          </div>
+          <div class="step-card text-center">
+            <h4 class="font-bold text-gray-800">レイアウト</h4>
+            <p class="text-sm text-gray-600">スマホファースト、直感的</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- スライド4: 制作フェーズ -->
+  <div class="slide">
+    <div class="grid-pattern"></div>
+    <div class="slide-content">
+      <div class="slide-number">04 / 05</div>
+      <h2 class="slide-title">制作実習：Canvaで形にしよう</h2>
+      <p class="text-xl text-gray-700 mb-6">
+        戦略が決まったら、いよいよ<strong>ビジュアル制作</strong>です。<br>
+        プロ仕様のCanvaを使って、本格的なLPを作成していきます。
+      </p>
+
+      <div class="text-center mb-8">
+        <a href="https://www.canva.com/design/DAGzJZevI4s/CvBEXmz4m4dOnzFxsIV6EQ/view?utm_content=DAGzJZevI4s&utm_campaign=designshare&utm_medium=link&utm_source=publishsharelink&mode=preview"
+          target="_blank" class="cta-button">
+          🚀 Canvaテンプレートを開く
+        </a>
+        <p class="text-sm text-gray-600 mt-2">* 今回専用のテンプレートが開きます</p>
+      </div>
+
+      <div class="tips-box mb-8">
+        <h3 class="text-xl font-bold text-gray-800 mb-3">🛠️ Canvaとは？</h3>
+        <p class="text-gray-700 leading-relaxed">
+          オーストラリア発のグラフィックデザインツール。<strong>プロ級のテンプレート</strong>と<strong>直感的な操作</strong>で、<br>
+          デザイン経験がなくても高品質な作品が作れます。世界で1億人以上が利用中！
+        </p>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-6">
+        <div class="step-card">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">⚡ Phase 1：基礎操作（15分）</h3>
+          <ul class="space-y-3 text-gray-700">
+            <li>• <strong>テンプレート選択：</strong>LP用レイアウトの理解</li>
+            <li>• <strong>要素編集：</strong>テキスト・画像・色の変更方法</li>
+            <li>• <strong>レイアウト調整：</strong>要素の配置とサイズ調整</li>
+            <li>• <strong>プレビュー機能：</strong>実際の表示確認</li>
+          </ul>
+        </div>
+
+        <div class="step-card">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">🎨 Phase 2：メインビジュアル制作（25分）</h3>
+          <ul class="space-y-3 text-gray-700">
+            <li>• <strong>ヘッダー：</strong>キャッチコピー・商品画像配置</li>
+            <li>• <strong>価値提案：</strong>3つの特徴を視覚化</li>
+            <li>• <strong>CTA設計：</strong>購入ボタンのデザイン</li>
+            <li>• <strong>レスポンシブ：</strong>スマホ表示の調整</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">📱 Phase 3：コンバージョン最適化（20分）</h3>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <h4 class="font-semibold text-gray-800 mb-2">心理学的アプローチ</h4>
+            <ul class="text-sm text-gray-600 space-y-1">
+              <li>• <strong>希少性：</strong>「限定100台」などの訴求</li>
+              <li>• <strong>社会的証明：</strong>レビュー・評価の配置</li>
+              <li>• <strong>緊急性：</strong>「今だけ特価」の表現</li>
+            </ul>
+          </div>
+          <div>
+            <h4 class="font-semibold text-gray-800 mb-2">視覚的工夫</h4>
+            <ul class="text-sm text-gray-600 space-y-1">
+              <li>• <strong>視線誘導：</strong>Zパターンのレイアウト</li>
+              <li>• <strong>色彩心理：</strong>CTAボタンの色選択</li>
+              <li>• <strong>余白活用：</strong>重要情報の強調</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- スライド5: 発表とまとめ -->
+  <div class="slide">
+    <div class="grid-pattern"></div>
+    <div class="slide-content">
+      <div class="slide-number">05 / 05</div>
+      <h2 class="slide-title">プレゼンテーション & 振り返り</h2>
+      <p class="text-xl text-gray-700 mb-8">
+        作品完成後は、<strong>プロのデザイナー</strong>と同じように<br>
+        クライアントプレゼンテーションを体験してみましょう。
+      </p>
+
+      <div class="grid lg:grid-cols-2 gap-8 mb-8">
+        <div class="step-card">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">🗣️ プレゼンのポイント</h3>
+          <ul class="space-y-3 text-gray-700">
+            <li>• <strong>戦略説明：</strong>なぜこのデザインにしたのか</li>
+            <li>• <strong>ターゲット分析：</strong>どんなユーザーを想定したか</li>
+            <li>• <strong>工夫点：</strong>特にこだわった部分の解説</li>
+            <li>• <strong>期待効果：</strong>このLPで何を達成できるか</li>
+          </ul>
+        </div>
+
+        <div class="step-card">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">📊 評価の観点</h3>
+          <ul class="space-y-3 text-gray-700">
+            <li>• <strong>ユーザビリティ：</strong>使いやすさ・分かりやすさ</li>
+            <li>• <strong>ブランド適合性：</strong>商品イメージとの一致</li>
+            <li>• <strong>コンバージョン：</strong>行動を促す力</li>
+            <li>• <strong>独創性：</strong>オリジナルな視点・アイデア</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="text-center">
+        <h3 class="text-2xl font-bold text-gray-800 mb-4">🌟 本日の学習成果</h3>
+        <div class="grid md:grid-cols-3 gap-4 mb-8">
+          <div class="step-card text-center">
+            <h4 class="font-bold accent-text">戦略思考</h4>
+            <p class="text-sm text-gray-600">ユーザー中心設計の基礎</p>
+          </div>
+          <div class="step-card text-center">
+            <h4 class="font-bold accent-text">実制作スキル</h4>
+            <p class="text-sm text-gray-600">プロツールの実践活用</p>
+          </div>
+          <div class="step-card text-center">
+            <h4 class="font-bold accent-text">プレゼン力</h4>
+            <p class="text-sm text-gray-600">デザイン意図の言語化</p>
+          </div>
+        </div>
+
+        <p class="text-lg text-gray-700">
+          今日の経験が、皆さんの<strong class="accent-text">「好き」</strong>や<strong class="accent-text">「得意」</strong>の発見、<br>
+          そして将来のキャリア選択に繋がることを願っています。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- スライド5: 発表とまとめ -->
+  <div class="slide">
+    <iframe width="640px" height="1600px"
+      src="https://forms.office.com/Pages/ResponsePage.aspx?id=DQSIkWdsW0yxEjajBLZtrQAAAAAAAAAAAANAAofD8oNUNEdQVkdNN0RDWVJZSFpNQVBLMkJBWTdEOC4u&embed=true"
+      frameborder="0" marginwidth="0" marginheight="0" style="border: none;"
+      allowfullscreen webkitallowfullscreen mozallowfullscreen msallowfullscreen> </iframe>
+  </div>
+
+  <script>
+    // スムーススクロール機能（オプション）
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown' || e.key === ' ') {
+        e.preventDefault();
+        window.scrollBy({
+          top: window.innerHeight,
+          behavior: 'smooth'
+        });
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        window.scrollBy({
+          top: -window.innerHeight,
+          behavior: 'smooth'
+        });
+      }
+    });
+  </script>
+</body>
+
+</html>
