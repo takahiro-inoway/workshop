@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Flashcard Game - Ultimate</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+  <!-- Anime.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;900&display=swap"
+    rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      background-color: #1a1a2e;
+      /* Deep dark blue */
+      overflow: hidden;
+      /* Prevent scroll bars for particles */
+    }
+
+    /* 3D Card Setup */
+    .scene {
+      perspective: 1000px;
+    }
+
+    .card-wrapper {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      /* Transition is handled by anime.js, so we remove CSS transition for transform */
+    }
+
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: 1.5rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-back {
+      transform: rotateY(180deg);
+    }
+
+    /* Floating Animation Background */
+    .bg-shape {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(60px);
+      z-index: -1;
+      opacity: 0.6;
+    }
+
+    /* Particle Container */
+    .particle-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+    }
+
+    /* Utility for text stroke */
+    .text-stroke {
+      -webkit-text-stroke: 4px rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+
+<body
+  class="text-white h-screen w-screen flex flex-col items-center justify-center selection:bg-pink-500 selection:text-white">
+
+  <div id="app" class="relative w-full h-full flex flex-col items-center justify-center">
+
+    <!-- Background Ambient Animation -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+      <div class="bg-shape bg-purple-600 w-96 h-96 top-0 left-0 mix-blend-multiply animate-pulse"></div>
+      <div class="bg-shape bg-pink-600 w-96 h-96 bottom-0 right-0 mix-blend-multiply animate-pulse"
+        style="animation-delay: 1s;"></div>
+      <div
+        class="bg-shape bg-blue-600 w-80 h-80 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 mix-blend-screen opacity-30">
+      </div>
+    </div>
+
+    <!-- Particle Container -->
+    <div class="particle-container" ref="particleContainer"></div>
+
+    <!-- SCREENS -->
+    <transition @enter="enterScreen" @leave="leaveScreen" mode="out-in" :css="false">
+
+      <!-- 1. Start Screen -->
+      <div v-if="gameState === 'start'" key="start" class="z-10 text-center flex flex-col items-center">
+        <h1
+          class="text-6xl md:text-8xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-pink-500 tracking-tighter filter drop-shadow-lg data-title">
+          3D 単語帳
+        </h1>
+        <p class="text-xl md:text-2xl text-blue-200 mb-12 tracking-widest font-bold opacity-80">LEARNING BATTLE</p>
+
+        <div
+          class="bg-white/10 backdrop-blur-md rounded-xl p-6 mb-8 border border-white/20 shadow-xl max-w-sm w-full mx-4">
+          <p class="text-sm text-gray-300 mb-2 uppercase tracking-bold">Best Score</p>
+          <p class="text-4xl font-mono font-bold text-yellow-300">{{ bestScore }}</p>
+        </div>
+
+        <button @click="startGame" @mouseenter="hoverButton" @mouseleave="leaveButton"
+          class="group relative px-10 py-5 bg-gradient-to-r from-pink-500 to-violet-600 rounded-full font-bold text-2xl shadow-lg transform transition hover:scale-105 hover:shadow-pink-500/50 focus:outline-none ring-4 ring-transparent focus:ring-pink-400">
+          <span class="relative z-10 flex items-center gap-3">
+            <span>GAME START</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-hover:translate-x-1 transition-transform"
+              fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </span>
+          <div class="absolute inset-0 rounded-full bg-white opacity-0 group-hover:opacity-20 transition-opacity"></div>
+        </button>
+      </div>
+
+      <!-- 2. Game Screen -->
+      <div v-else-if="gameState === 'game'" key="game" class="z-10 w-full max-w-2xl px-4 flex flex-col items-center">
+
+        <!-- Header Info -->
+        <div class="w-full flex justify-between items-end mb-6 text-sm font-bold tracking-wider">
+          <div class="bg-black/30 px-4 py-2 rounded-lg backdrop-blur-sm border border-white/10">
+            <span class="text-gray-400">PROGRESS</span>
+            <span class="text-xl ml-2 text-white">{{ currentIndex + 1 }} <span class="text-sm text-gray-500">/ {{
+                words.length }}</span></span>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="flex-1 mx-4 h-3 bg-gray-800 rounded-full overflow-hidden relative">
+            <div
+              class="absolute top-0 left-0 h-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-500 ease-out"
+              :style="{ width: progressPercentage + '%' }"></div>
+          </div>
+
+          <div class="bg-black/30 px-4 py-2 rounded-lg backdrop-blur-sm border border-white/10">
+            <span class="text-gray-400">TIME</span>
+            <span class="text-xl ml-2 font-mono text-yellow-300">{{ formattedTime }}</span>
+          </div>
+        </div>
+
+        <!-- 3D Card Area -->
+        <div class="scene w-full max-w-md aspect-[3/2] cursor-pointer group mb-10" @click="flipCard">
+          <div class="card-wrapper" ref="cardWrapper">
+            <!-- FRONT -->
+            <div
+              class="card-face bg-gradient-to-br from-white to-gray-100 text-gray-800 border-4 border-white overflow-hidden">
+              <div class="absolute top-4 right-4 text-xs font-bold text-gray-300 uppercase">Question</div>
+              <div
+                class="text-4xl md:text-5xl font-black text-center px-4 tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-gray-700 to-gray-900">
+                {{ currentWord[0] }}
+              </div>
+              <div class="absolute bottom-0 w-full h-2 bg-blue-500"></div>
+              <div class="absolute bottom-4 text-gray-400 text-sm animate-bounce">Click to Flip</div>
+            </div>
+
+            <!-- BACK -->
+            <div
+              class="card-back card-face bg-gradient-to-br from-indigo-600 to-purple-700 text-white border-4 border-indigo-400 overflow-hidden">
+              <div class="absolute top-4 right-4 text-xs font-bold text-indigo-300 uppercase">Answer</div>
+              <div class="flex flex-col items-center justify-center p-6 text-center">
+                <h3 class="text-2xl md:text-3xl font-bold mb-4">{{ currentWord[0] }}</h3>
+                <p class="text-lg md:text-xl leading-relaxed text-indigo-100 font-medium">{{ currentWord[1] }}</p>
+              </div>
+              <div class="absolute bottom-0 w-full h-2 bg-pink-500"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex gap-4">
+          <button @click="nextWord"
+            class="px-8 py-4 bg-white text-indigo-900 rounded-xl font-bold shadow-lg hover:bg-gray-50 hover:scale-105 active:scale-95 transition-all flex items-center gap-2">
+            <span>NEXT CARD</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd"
+                d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
+                clip-rule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. Result Screen -->
+      <div v-else-if="gameState === 'result'" key="result"
+        class="z-10 text-center flex flex-col items-center w-full max-w-lg px-4">
+        <div class="mb-8 relative">
+          <div class="absolute inset-0 bg-yellow-400 blur-3xl opacity-20 rounded-full animate-pulse"></div>
+          <h2 class="relative text-5xl font-black text-white italic transform -rotate-2">
+            FINISH!
+          </h2>
+        </div>
+
+        <div
+          class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 w-full shadow-2xl mb-8 transform transition hover:scale-[1.02]">
+          <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="bg-black/20 rounded-lg p-4">
+              <p class="text-gray-400 text-xs uppercase mb-1">Time</p>
+              <p class="text-2xl font-mono text-cyan-300">{{ formattedTime }}s</p>
+            </div>
+            <div class="bg-black/20 rounded-lg p-4">
+              <p class="text-gray-400 text-xs uppercase mb-1">Cards</p>
+              <p class="text-2xl font-mono text-purple-300">{{ words.length }}</p>
+            </div>
+          </div>
+
+          <div class="border-t border-white/10 pt-6">
+            <p class="text-sm text-gray-300 uppercase tracking-widest mb-2">Total Score</p>
+            <p class="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-orange-300 to-red-300 filter drop-shadow-md"
+              ref="scoreDisplay">
+              0
+            </p>
+          </div>
+        </div>
+
+        <div class="flex gap-4">
+          <button @click="restartGame"
+            class="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold shadow-lg transition-all hover:-translate-y-1">
+            もう一度遊ぶ
+          </button>
+          <button @click="backToTitle"
+            class="px-8 py-3 bg-transparent border-2 border-white/30 hover:bg-white/10 text-white rounded-lg font-bold transition-all">
+            タイトルへ
+          </button>
+        </div>
+      </div>
+
+    </transition>
+
+  </div>
+
+  <script>
+    const { createApp, ref, computed, onMounted, nextTick } = Vue;
+
+    createApp({
+      setup() {
+        // --- State ---
+        const gameState = ref('start'); // 'start', 'game', 'result'
+        const words = ref([]);
+        const currentIndex = ref(0);
+        const isFlipped = ref(false);
+        const startTime = ref(0);
+        const endTime = ref(0);
+        const timerInterval = ref(null);
+        const currentTime = ref(0);
+
+        // Card DOM ref for Animation
+        const cardWrapper = ref(null);
+        const scoreDisplay = ref(null);
+        const particleContainer = ref(null);
+
+        // Dummy Data
+        const dummyWords = [
+          ["Adventure", "冒険。未知の体験を求めて旅をすること。"],
+          ["Galaxy", "銀河。無数の星や星間物質の集まり。"],
+          ["Echo", "反響。音が何かに当たって跳ね返ってくること。"],
+          ["Velocity", "速度。ある方向への速さ。"],
+          ["Horizon", "地平線。空と地面が接して見える線。"],
+          ["Phantom", "幻影。実体のない幻。"],
+          ["Quantum", "量子。物理量の最小単位。"],
+          ["Zenith", "天頂。頭の真上の空の点。"]
+        ];
+
+        const bestScore = ref(localStorage.getItem("bestScore") || 0);
+        const finalScore = ref(0);
+
+        // --- Computed ---
+        const currentWord = computed(() => {
+          if (words.value.length === 0) return ["", ""];
+          return words.value[currentIndex.value];
+        });
+
+        const progressPercentage = computed(() => {
+          if (words.value.length === 0) return 0;
+          return ((currentIndex.value) / words.value.length) * 100;
+        });
+
+        const formattedTime = computed(() => {
+          const t = gameState.value === 'result'
+            ? (endTime.value - startTime.value) / 1000
+            : (currentTime.value - startTime.value) / 1000;
+          return Math.max(0, t).toFixed(1);
+        });
+
+        // --- Actions ---
+
+        // Setup Game Data
+        // Setup Game Data
+        const loadData = async () => {
+          try {
+            const res = await fetch("quiz.csv");
+
+            // --- 💡 CSVパース処理の追加 ---
+            const csvText = await res.text();
+
+            // 行ごとに分割し、空行を除去
+            const rows = csvText.split('\n').filter(row => row.trim() !== '');
+
+            // 各行をカンマで分割して[単語, 説明]の配列に変換
+            const parsedWords = rows.map(row => {
+              // シンプルなカンマ区切りでパース
+              return row.split(',');
+            });
+            console.log(parsedWords)
+            // ロードされたデータをwordsに設定し、シャッフル
+            words.value = parsedWords.sort(() => Math.random() - 0.5);
+            // -------------------------------
+
+            // CSVの読み込みに失敗した場合のフォールバックとしてダミーデータを使用
+            if (words.value.length === 0) {
+              console.warn("CSVのパース結果が空です。ダミーデータを使用します。");
+              words.value = [...dummyWords].sort(() => Math.random() - 0.5);
+            }
+
+          } catch (error) {
+            console.error("CSVファイルの読み込みまたはパースに失敗しました:", error);
+            // エラー発生時もダミーデータで続行
+            words.value = [...dummyWords].sort(() => Math.random() - 0.5);
+          }
+        };
+
+        const startGame = async () => {
+          await loadData();
+          currentIndex.value = 0;
+          isFlipped.value = false;
+          startTime.value = Date.now();
+          currentTime.value = Date.now();
+
+          // Start Timer
+          if (timerInterval.value) clearInterval(timerInterval.value);
+          timerInterval.value = setInterval(() => {
+            currentTime.value = Date.now();
+          }, 100);
+
+          changeGameState('game');
+        };
+
+        const flipCard = () => {
+          if (!cardWrapper.value) return;
+
+          isFlipped.value = !isFlipped.value;
+
+          // Play sound logic here if needed
+
+          // Anime.js Flip Animation
+          anime({
+            targets: cardWrapper.value,
+            rotateY: isFlipped.value ? 180 : 0,
+            duration: 800,
+            easing: 'spring(1, 80, 10, 0)' // Bouncy spring effect
+          });
+
+          // Trigger particles on flip for fun
+          if (isFlipped.value) {
+            createParticles(window.innerWidth / 2, window.innerHeight / 2, 10);
+          }
+        };
+
+        const nextWord = () => {
+          // Animate current card out
+          anime({
+            targets: cardWrapper.value,
+            translateX: [0, -500],
+            opacity: [1, 0],
+            rotateY: isFlipped.value ? 180 : 0, // maintain rotation
+            duration: 400,
+            easing: 'easeInBack',
+            complete: () => {
+              // Logic update
+              currentIndex.value++;
+              if (currentIndex.value >= words.value.length) {
+                finishGame();
+              } else {
+                // Reset for next card
+                isFlipped.value = false;
+
+                // Reset CSS transform immediately without animation for the new card logic
+                anime.set(cardWrapper.value, {
+                  translateX: 500,
+                  rotateY: 0,
+                  opacity: 0
+                });
+
+                // Animate new card in
+                anime({
+                  targets: cardWrapper.value,
+                  translateX: [500, 0],
+                  opacity: [0, 1],
+                  duration: 600,
+                  easing: 'easeOutElastic(1, .8)',
+                  delay: 100
+                });
+              }
+            }
+          });
+        };
+
+        const finishGame = () => {
+          clearInterval(timerInterval.value);
+          endTime.value = Date.now();
+
+          // Calculate Score
+          const time = (endTime.value - startTime.value) / 1000;
+          const rawScore = Math.floor(10000 / Math.max(1, time)) * words.value.length;
+          finalScore.value = rawScore;
+
+          // Update Best
+          if (rawScore > Number(bestScore.value)) {
+            bestScore.value = rawScore;
+            localStorage.setItem("bestScore", rawScore);
+          }
+
+          changeGameState('result');
+        };
+
+        const restartGame = () => {
+          startGame();
+        };
+
+        const backToTitle = () => {
+          changeGameState('start');
+        };
+
+        // --- Animation Utilities ---
+
+        const changeGameState = (newState) => {
+          gameState.value = newState;
+        };
+
+        const enterScreen = (el, done) => {
+          // Stagger animation for children
+          anime({
+            targets: el.children,
+            opacity: [0, 1],
+            translateY: [20, 0],
+            delay: anime.stagger(100),
+            duration: 600,
+            easing: 'easeOutQuad',
+            complete: done
+          });
+
+          // Special logic for result screen
+          if (gameState.value === 'result') {
+            nextTick(() => {
+              fireConfetti();
+              animateScore();
+            });
+          }
+        };
+
+        const leaveScreen = (el, done) => {
+          anime({
+            targets: el,
+            opacity: [1, 0],
+            translateY: [0, -20],
+            duration: 300,
+            easing: 'easeInQuad',
+            complete: done
+          });
+        };
+
+        const animateScore = () => {
+          const obj = { val: 0 };
+          anime({
+            targets: obj,
+            val: finalScore.value,
+            round: 1,
+            duration: 2000,
+            easing: 'easeOutExpo',
+            update: function () {
+              if (scoreDisplay.value) {
+                scoreDisplay.value.innerHTML = obj.val;
+              }
+            }
+          });
+        };
+
+        const hoverButton = (e) => {
+          anime.remove(e.target);
+          anime({
+            targets: e.target,
+            scale: 1.05,
+            duration: 300,
+            easing: 'easeOutElastic(1, .6)'
+          });
+        };
+
+        const leaveButton = (e) => {
+          anime.remove(e.target);
+          anime({
+            targets: e.target,
+            scale: 1.0,
+            duration: 300,
+            easing: 'easeOutQuad'
+          });
+        };
+
+        // --- Particles System ---
+        const createParticles = (x, y, count = 15) => {
+          const colors = ['#FF1461', '#18FF92', '#5A87FF', '#FBF38C'];
+
+          for (let i = 0; i < count; i++) {
+            const p = document.createElement('div');
+            p.classList.add('particle');
+            particleContainer.value.appendChild(p);
+
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const size = Math.random() * 8 + 4;
+
+            // Set initial styles
+            p.style.backgroundColor = color;
+            p.style.width = size + 'px';
+            p.style.height = size + 'px';
+            p.style.left = (x - size / 2) + 'px';
+            p.style.top = (y - size / 2) + 'px';
+
+            // Animate
+            anime({
+              targets: p,
+              translateX: () => anime.random(-100, 100),
+              translateY: () => anime.random(-100, 100),
+              scale: [1, 0],
+              opacity: [1, 0],
+              duration: () => anime.random(600, 1200),
+              easing: 'easeOutExpo',
+              complete: () => p.remove()
+            });
+          }
+        };
+
+        const fireConfetti = () => {
+          const duration = 3000;
+          const end = Date.now() + duration;
+
+          // A simple interval to spawn particles for a while
+          const interval = setInterval(() => {
+            if (Date.now() > end) {
+              clearInterval(interval);
+              return;
+            }
+            createParticles(
+              Math.random() * window.innerWidth,
+              Math.random() * window.innerHeight,
+              5
+            );
+          }, 100);
+        };
+
+        onMounted(() => {
+          // Initial animation for title elements if desired
+          anime({
+            targets: '.data-title',
+            translateY: [-50, 0],
+            opacity: [0, 1],
+            duration: 1000,
+            delay: 300,
+            easing: 'easeOutExpo'
+          });
+        });
+
+        return {
+          gameState,
+          words,
+          currentIndex,
+          currentWord,
+          progressPercentage,
+          formattedTime,
+          bestScore,
+          startGame,
+          flipCard,
+          nextWord,
+          restartGame,
+          backToTitle,
+          enterScreen,
+          leaveScreen,
+          cardWrapper,
+          scoreDisplay,
+          hoverButton,
+          leaveButton,
+          particleContainer
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+
+</html>
