@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>尖度（Kurtosis）アニメーション</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* カスタムスタイル: Noto Sansを優先 */
+    body {
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background-color: #f7f9fb;
+    }
+
+    canvas {
+      touch-action: none;
+      /* タッチ操作でのスクロールを防ぐ */
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-2xl bg-white shadow-xl rounded-xl p-6 md:p-8">
+    <h1 class="text-3xl font-extrabold text-gray-800 mb-2 text-center">尖度 (Kurtosis) を視覚化すると...？</h1>
+    <p class="text-gray-600 mb-6 text-center">
+      グラフの形状が「フラットな裾（低い尖度）」から「尖った中央と厚い裾（高い尖度）」へと変化する様子をご覧ください。
+    </p>
+
+    <!-- 尖度を示す値と説明を表示するエリア -->
+    <div id="kurtosis-info" class="mb-6 p-3 bg-indigo-50 border-l-4 border-indigo-500 rounded-lg text-center">
+      <span class="text-lg font-bold text-indigo-700">尖度シミュレーション値: </span>
+      <span id="kurtosis-value" class="text-2xl font-mono text-indigo-900">2.00</span>
+      <p id="kurtosis-label" class="text-sm text-indigo-700 mt-1">正規分布に近い状態</p>
+    </div>
+
+    <!-- グラフ描画エリア -->
+    <div class="flex justify-center items-center bg-gray-50 border border-gray-200 rounded-lg">
+      <canvas id="kurtosisCanvas" class="w-full h-96"></canvas>
+    </div>
+
+    <p class="text-xs text-gray-400 mt-4 text-center">
+      ※このアニメーションは、正規分布に似た形の分布における尖度の変化を視覚的にシミュレーションしたものです。
+    </p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('kurtosisCanvas');
+      const ctx = canvas.getContext('2d');
+      const kurtosisValueDisplay = document.getElementById('kurtosis-value');
+      const kurtosisLabelDisplay = document.getElementById('kurtosis-label');
+
+      let animationFrameId;
+      let lastTime = 0;
+      const speed = 0.001; // アニメーションの速度 (小さいほどゆっくり)
+
+      // グラフのパラメータ
+      const rangeX = 5; // X軸の描画範囲 (-rangeX から +rangeX)
+      const sigma = 1.0; // 分散パラメータ (固定)
+      const p_low = 1.5;  // 低い尖度をシミュレートする指数 (平たい/Platykurtic)
+      const p_high = 3.5; // 高い尖度をシミュレートする指数 (尖鋭/Leptokurtic)
+
+      // 尖度をシミュレートする関数
+      // f(x) = C * exp(-|x / sigma|^p)
+      function distributionFunction(x, p) {
+        const z = x / sigma;
+        // 最大値が一定になるように高さCを調整 (pが小さいほどCを大きくする必要がある)
+        // これは近似的な調整であり、実際のPDFの正規化定数ではありません。
+        let heightFactor = 1.0;
+        if (p < 2) {
+          heightFactor = 1 + (2 - p) * 0.4; // p=1.5なら1.2
+        } else if (p > 2) {
+          heightFactor = 1 + (p - 2) * 0.4; // p=3.5なら1.6
+        }
+
+        return heightFactor * Math.exp(-Math.pow(Math.abs(z), p));
+      }
+
+      // Canvasサイズと描画エリアを更新する関数
+      function resizeCanvas() {
+        // 親要素のサイズに合わせる
+        const parent = canvas.parentElement;
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
+        draw(lastTime);
+      }
+
+      // 描画関数
+      function draw(time) {
+        // 時間経過に基づき、0.0から1.0の間を往復する値 (lerp_factor) を計算
+        const cycleDuration = 4000; // 4秒で往復
+        const normalizedTime = (time % cycleDuration) / cycleDuration;
+        // sinカーブを使って滑らかに0から1へ、そして1から0へ戻る動きを生成
+        const lerp_factor = (Math.sin(normalizedTime * 2 * Math.PI) + 1) / 2;
+
+        // 現在の指数p (尖度シミュレーション値) を線形補間
+        const current_p = p_low + (p_high - p_low) * lerp_factor;
+
+        // 尖度表示の更新
+        const displayedKurtosis = 3.0 + (current_p - 2.0) * 2.0; // p=2を正規分布の尖度3.0に対応させる近似
+        kurtosisValueDisplay.textContent = displayedKurtosis.toFixed(2);
+
+        if (current_p < p_low + 0.2) {
+          kurtosisLabelDisplay.textContent = "低い尖度 (Platykurtic) - フラットな裾";
+        } else if (current_p > p_high - 0.2) {
+          kurtosisLabelDisplay.textContent = "高い尖度 (Leptokurtic) - 尖った中央と厚い裾";
+        } else {
+          kurtosisLabelDisplay.textContent = "尖度が変化中";
+        }
+
+
+        // 1. Canvasをクリア
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 2. グラフの中心線と軸を描画
+        const centerY = canvas.height * 0.9;
+        const centerX = canvas.width / 2;
+        const scaleY = canvas.height * 0.8;
+        const scaleX = canvas.width / (rangeX * 2.2);
+
+        ctx.strokeStyle = '#ccc';
+        ctx.lineWidth = 1;
+
+        // X軸 (中央線)
+        ctx.beginPath();
+        ctx.moveTo(0, centerY);
+        ctx.lineTo(canvas.width, centerY);
+        ctx.stroke();
+
+        // Y軸 (平均値の位置)
+        ctx.beginPath();
+        ctx.moveTo(centerX, 0);
+        ctx.lineTo(centerX, canvas.height);
+        ctx.stroke();
+
+        // 3. 曲線を描画
+        ctx.beginPath();
+        ctx.strokeStyle = '#6366f1'; // インディゴ 500
+        ctx.lineWidth = 3;
+
+        for (let px = 0; px <= canvas.width; px++) {
+          // ピクセル座標をグラフのX値に変換
+          const x = (px - centerX) / scaleX;
+
+          // 現在のp値を使ってy値を計算
+          let y = distributionFunction(x, current_p);
+
+          // Y値をキャンバス座標に変換 (最大高さを調整)
+          const canvasY = centerY - y * (scaleY / distributionFunction(0, p_high)); // 最大高さをp_highのときの高さに合わせる
+
+          if (px === 0) {
+            ctx.moveTo(px, canvasY);
+          } else {
+            ctx.lineTo(px, canvasY);
+          }
+        }
+        ctx.stroke();
+      }
+
+      // アニメーションループ
+      function animate(time) {
+        if (lastTime === 0) lastTime = time; // 初回実行時
+        draw(time);
+        lastTime = time;
+        animationFrameId = requestAnimationFrame(animate);
+      }
+
+      // 初期化とリスナー設定
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas(); // 初期描画
+
+      // アニメーション開始
+      animate(0);
+
+      // クリーンアップ (Canvas環境外では不要ですが、習慣として)
+      window.onbeforeunload = () => {
+        cancelAnimationFrame(animationFrameId);
+      };
+    });
+  </script>
+</body>
+
+</html>
