@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>歪度（Skewness）アニメーション</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* カスタムスタイル: Noto Sansを優先 */
+    body {
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background-color: #f7f9fb;
+    }
+
+    canvas {
+      touch-action: none;
+      /* タッチ操作でのスクロールを防ぐ */
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-2xl bg-white shadow-xl rounded-xl p-6 md:p-8">
+    <h1 class="text-3xl font-extrabold text-gray-800 mb-2 text-center">歪度 (Skewness) の視覚化すると...？</h1>
+    <p class="text-gray-600 mb-6 text-center">
+      グラフの形状が「左右対称」から「右に長い尾（正の歪度）」、「左に長い尾（負の歪度）」へと変化する様子をご覧ください。
+    </p>
+
+    <!-- 歪度を示す値と説明を表示するエリア -->
+    <div id="skewness-info" class="mb-6 p-3 bg-fuchsia-50 border-l-4 border-fuchsia-500 rounded-lg text-center">
+      <span class="text-lg font-bold text-fuchsia-700">歪度シミュレーション値: </span>
+      <span id="skewness-value" class="text-2xl font-mono text-fuchsia-900">0.00</span>
+      <p id="skewness-label" class="text-sm text-fuchsia-700 mt-1">左右対称（正規分布に近い状態）</p>
+    </div>
+
+    <!-- グラフ描画エリア -->
+    <div class="flex justify-center items-center bg-gray-50 border border-gray-200 rounded-lg">
+      <canvas id="skewnessCanvas" class="w-full h-96"></canvas>
+    </div>
+
+    <p class="text-xs text-gray-400 mt-4 text-center">
+      ※このアニメーションは、左右非対称性の変化を視覚的にシミュレーションしたものです。
+    </p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('skewnessCanvas');
+      const ctx = canvas.getContext('2d');
+      const skewnessValueDisplay = document.getElementById('skewness-value');
+      const skewnessLabelDisplay = document.getElementById('skewness-label');
+
+      let animationFrameId;
+      let lastTime = 0;
+
+      // グラフのパラメータ
+      const rangeX = 4; // X軸の描画範囲 (-rangeX から +rangeX)
+      const sigma_base = 1.0; // 基本の分散パラメータ
+
+      // 歪度をシミュレートする関数
+      // 左右で異なるスケールを適用することで非対称性を表現
+      function distributionFunction(x, current_skew) {
+        let sigma_scale;
+
+        if (x >= 0) {
+          // x >= 0 (右側): スケールを圧縮/伸長
+          // current_skew > 0 (正の歪度) のとき、右側を伸長 (scaleUp)
+          // current_skew < 0 (負の歪度) のとき、右側を圧縮 (scaleDown)
+          sigma_scale = sigma_base * (1 + current_skew);
+        } else {
+          // x < 0 (左側): スケールを伸長/圧縮
+          // current_skew > 0 (正の歪度) のとき、左側を圧縮 (scaleDown)
+          // current_skew < 0 (負の歪度) のとき、左側を伸長 (scaleUp)
+          sigma_scale = sigma_base * (1 - current_skew);
+        }
+
+        // ガウス分布のシミュレーション（ピークの高さを維持するために正規化定数を無視）
+        const z = x / sigma_scale;
+        return Math.exp(-0.5 * z * z);
+      }
+
+      // Canvasサイズと描画エリアを更新する関数
+      function resizeCanvas() {
+        // 親要素のサイズに合わせる
+        const parent = canvas.parentElement;
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
+        draw(lastTime);
+      }
+
+      // 描画関数
+      function draw(time) {
+        // アニメーションサイクルを計算
+        const cycleDuration = 6000; // 6秒で「対称 -> 正 -> 対称 -> 負 -> 対称」を一周
+        const phaseDuration = cycleDuration / 4; // 各フェーズ1.5秒
+        const normalizedTime = time % cycleDuration;
+
+        let current_skew;
+        let phase = Math.floor(normalizedTime / phaseDuration);
+        let phaseProgress = (normalizedTime % phaseDuration) / phaseDuration; // 0.0 to 1.0
+
+        const skew_max = 0.5; // シミュレーションで使う歪度の最大値
+
+        // 4段階のアニメーション: 0 -> Max_Pos -> 0 -> Max_Neg -> 0
+        if (phase === 0) {
+          // Phase 1: Symmetric (0) -> Positive Skew (skew_max)
+          current_skew = skew_max * phaseProgress;
+        } else if (phase === 1) {
+          // Phase 2: Positive Skew (skew_max) -> Symmetric (0)
+          current_skew = skew_max * (1 - phaseProgress);
+        } else if (phase === 2) {
+          // Phase 3: Symmetric (0) -> Negative Skew (-skew_max)
+          current_skew = -skew_max * phaseProgress;
+        } else { // phase === 3
+          // Phase 4: Negative Skew (-skew_max) -> Symmetric (0)
+          current_skew = -skew_max * (1 - phaseProgress);
+        }
+
+        // 歪度表示の更新 (シミュレーション値を直接表示)
+        const displayedSkewness = current_skew * 2.5; // 視覚的な変化に合わせて値を調整
+        skewnessValueDisplay.textContent = displayedSkewness.toFixed(2);
+
+        if (current_skew > 0.4) {
+          skewnessLabelDisplay.textContent = "正の歪度 (右に長い尾)";
+        } else if (current_skew < -0.4) {
+          skewnessLabelDisplay.textContent = "負の歪度 (左に長い尾)";
+        } else if (Math.abs(current_skew) < 0.05) {
+          skewnessLabelDisplay.textContent = "左右対称（正規分布に近い状態）";
+        } else {
+          skewnessLabelDisplay.textContent = "歪度が変化中";
+        }
+
+
+        // 1. Canvasをクリア
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 2. グラフの中心線と軸を描画
+        const centerY = canvas.height * 0.9;
+        const centerX = canvas.width / 2;
+        const scaleY = canvas.height * 0.8;
+        const scaleX = canvas.width / (rangeX * 2.2);
+
+        ctx.strokeStyle = '#ccc';
+        ctx.lineWidth = 1;
+
+        // X軸 (中央線)
+        ctx.beginPath();
+        ctx.moveTo(0, centerY);
+        ctx.lineTo(canvas.width, centerY);
+        ctx.stroke();
+
+        // Y軸 (平均値の位置)
+        ctx.beginPath();
+        ctx.moveTo(centerX, 0);
+        ctx.lineTo(centerX, canvas.height);
+        ctx.stroke();
+
+        // 3. 曲線を描画
+        ctx.beginPath();
+        ctx.strokeStyle = '#a21caf'; // フクシア 700
+        ctx.lineWidth = 3;
+
+        // 描画の精度
+        const steps = canvas.width;
+
+        for (let px = 0; px <= steps; px++) {
+          // ピクセル座標をグラフのX値に変換
+          const x = (px - centerX) / scaleX;
+
+          // 現在の歪度値を使ってy値を計算
+          let y = distributionFunction(x, current_skew);
+
+          // Y値をキャンバス座標に変換 (最大高さは常に分布のピークy=1.0に合わせる)
+          const canvasY = centerY - y * scaleY;
+
+          if (px === 0) {
+            ctx.moveTo(px, canvasY);
+          } else {
+            ctx.lineTo(px, canvasY);
+          }
+        }
+        ctx.stroke();
+      }
+
+      // アニメーションループ
+      function animate(time) {
+        if (lastTime === 0) lastTime = time; // 初回実行時
+        draw(time);
+        lastTime = time;
+        animationFrameId = requestAnimationFrame(animate);
+      }
+
+      // 初期化とリスナー設定
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas(); // 初期描画
+
+      // アニメーション開始
+      animate(0);
+
+      // クリーンアップ (Canvas環境外では不要ですが、習慣として)
+      window.onbeforeunload = () => {
+        cancelAnimationFrame(animationFrameId);
+      };
+    });
+  </script>
+</body>
+
+</html>
