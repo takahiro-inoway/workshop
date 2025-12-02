@@ -77,32 +77,17 @@
 
       <!-- カラー選択とクリアボタン -->
       <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-        <!-- カラー選択 -->
-        <div class="flex-grow flex items-center bg-gray-50 p-3 rounded-lg shadow-inner">
-          <span class="text-sm font-medium text-gray-700 mr-3 whitespace-nowrap">現在の色:</span>
-          <div id="color-selector" class="flex space-x-2">
-            <!-- 色0: 消しゴム/背景 -->
-            <button data-color="0"
-              class="color-btn w-10 h-10 rounded-full focus:ring-4 focus:ring-offset-2 focus:ring-gray-300 transition duration-150"
-              style="background-color: #f3f4f6; border: 2px solid #ccc;" title="色0 (消しゴム)"></button>
-            <!-- 色1: 黒 -->
-            <button data-color="1"
-              class="color-btn w-10 h-10 bg-gray-900 rounded-full focus:ring-4 focus:ring-offset-2 focus:ring-gray-900 transition duration-150"
-              title="色1"></button>
-            <!-- 色2: 赤 -->
-            <button data-color="2"
-              class="color-btn w-10 h-10 bg-red-500 rounded-full focus:ring-4 focus:ring-offset-2 focus:ring-red-300 transition duration-150"
-              title="色2"></button>
-            <!-- 色3: 青 -->
-            <button data-color="3"
-              class="color-btn w-10 h-10 bg-blue-500 rounded-full focus:ring-4 focus:ring-offset-2 focus:ring-blue-300 transition duration-150"
-              title="色3"></button>
+        <!-- カラー設定と選択 -->
+        <div class="flex-grow bg-gray-50 p-3 rounded-lg shadow-inner">
+          <h2 class="text-lg font-semibold text-gray-700 mb-2">色の設定</h2>
+          <div id="color-controls" class="space-y-4">
+            <!-- 色の選択ボタンと入力フィールドがここに動的に生成されます -->
           </div>
         </div>
 
         <!-- クリアボタン -->
         <button id="clear-btn"
-          class="px-6 py-3 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition duration-150 shadow-md flex-shrink-0">
+          class="px-6 py-3 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition duration-150 shadow-md flex-shrink-0 h-full sm:h-auto mt-auto">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20"
             fill="currentColor">
             <path fill-rule="evenodd"
@@ -166,11 +151,29 @@
     const arrayOutput = document.getElementById('array-output');
     const copyBtn = document.getElementById('copy-btn');
     const messageBox = document.getElementById('message-box');
-    const colorButtons = document.querySelectorAll('.color-btn');
-
+    const colorControlsContainer = document.getElementById('color-controls');
+    
     let gridSize = parseInt(gridSizeInput.value, 10);
     let isDrawing = false; // ドラッグ描画判定用
-    let drawState = 1;     // 描画モード (0:消しゴム, 1, 2, 3:色)
+    let drawState = 1;     // 描画モード (0:消しゴム, 1, 2, 3:色インデックス)
+
+    // 各色インデックスに対応する、配列に出力するカスタム値（トークン）
+    // key: colorIndex (0, 1, 2, 3...), value: 出力文字列
+    let colorTokens = {
+      '0': 0, // 色0 (消しゴム/背景) はデフォルトで 0
+      '1': 1, // 色1 (黒) はデフォルトで 1
+      '2': 2, // 色2 (赤) はデフォルトで 2
+      '3': 3  // 色3 (青) はデフォルトで 3
+    };
+
+    // 定義済みの色とタイトル
+    const predefinedColors = [
+      { index: 0, title: "色0 (消しゴム/背景)", class: "bg-gray-100", style: "border: 2px solid #ccc;" },
+      { index: 1, title: "色1 (黒)", class: "bg-gray-900", style: "" },
+      { index: 2, title: "色2 (赤)", class: "bg-red-500", style: "" },
+      { index: 3, title: "色3 (青)", class: "bg-blue-500", style: "" }
+      // 必要に応じて色を増やす場合はここに定義を追加してください
+    ];
 
     // メッセージボックスを表示する関数
     function showMessage(text, type = 'success') {
@@ -192,6 +195,130 @@
       }, 3000);
     }
 
+    // --- コントロールパネルの描画 ---
+
+    /**
+     * 色の選択ボタンと値入力フィールドを動的に描画する
+     */
+    function renderColorControls() {
+      colorControlsContainer.innerHTML = '';
+      
+      predefinedColors.forEach(color => {
+        const index = color.index;
+        const colorDiv = document.createElement('div');
+        colorDiv.classList.add('flex', 'items-center', 'space-x-3', 'p-2', 'rounded-lg', 'border');
+
+        // 1. 色選択ボタン
+        const colorBtn = document.createElement('button');
+        colorBtn.dataset.color = index;
+        colorBtn.classList.add(
+          'color-btn', 
+          'w-10', 'h-10', 
+          color.class, 
+          'rounded-full', 
+          'focus:outline-none', 
+          'focus:ring-4', 'focus:ring-offset-2', 
+          'transition', 'duration-150',
+          (index === 0 ? 'focus:ring-gray-300' : 'focus:ring-gray-900')
+        );
+        colorBtn.style.cssText = color.style;
+        colorBtn.title = color.title;
+        colorBtn.addEventListener('click', handleColorSelect);
+        
+        // 2. ラベルとタイトル
+        const label = document.createElement('span');
+        label.classList.add('text-sm', 'font-medium', 'text-gray-700', 'w-1/4', 'sm:w-1/5', 'flex-shrink-0');
+        label.textContent = color.title.split(' ')[0]; // 例: "色1"
+
+        // 3. 値入力フィールド
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = colorTokens[index]; // 現在の設定値を表示
+        input.dataset.color = index;
+        input.placeholder = index;
+        input.classList.add(
+          'token-input', 
+          'flex-grow', 
+          'p-1', 
+          'border', 'border-gray-300', 
+          'rounded-lg', 
+          'text-center', 
+          'font-mono', 
+          'text-sm', 
+          'focus:ring-blue-500', 
+          'focus:border-blue-500'
+        );
+
+        // 値変更時のイベントリスナー
+        input.addEventListener('input', (e) => {
+          // colorTokensを更新
+          // 値が数値で構成されているか、クォーテーションで囲むべき文字列かを判定
+          const value = e.target.value.trim();
+          
+          if (value === "") {
+             // 空文字列はそのまま保存
+             colorTokens[index] = "";
+          } else if (!isNaN(Number(value)) && isFinite(value) && value.indexOf('.') === -1) {
+            // 整数と見なせる場合は数値として保存 (クォーテーションなし)
+            colorTokens[index] = Number(value);
+          } else if (value.match(/^[a-zA-Z0-9_]+$/)) {
+            // クォーテーションなしで出力したい、例えばAやBなどの識別子の場合
+             colorTokens[index] = value;
+          } else {
+            // それ以外（例: "A" や 'B' や float）は文字列として保存
+             colorTokens[index] = value;
+          }
+
+          // 配列出力時に、クォーテーションで囲むかどうかは convertGridToArray で処理されます
+        });
+
+        colorDiv.appendChild(colorBtn);
+        colorDiv.appendChild(label);
+        colorDiv.appendChild(input);
+        colorControlsContainer.appendChild(colorDiv);
+      });
+
+      // 初期選択状態のスタイルを適用
+      updateColorButtonStyles(drawState);
+    }
+
+    /**
+     * 色選択ボタンがクリックされた時の処理
+     */
+    function handleColorSelect(e) {
+      // drawStateを更新
+      drawState = parseInt(e.currentTarget.dataset.color, 10);
+      
+      // 選択状態のスタイルを更新
+      updateColorButtonStyles(drawState);
+
+      if (drawState === 0) {
+        showMessage('描画色を 色 0 (消しゴム) に設定しました。');
+      } else {
+        showMessage(`描画色を 色 ${drawState} に設定しました。`);
+      }
+    }
+
+    /**
+     * 選択されている色ボタンのスタイルを更新する
+     * @param {number} selectedIndex 選択された色インデックス
+     */
+    function updateColorButtonStyles(selectedIndex) {
+      document.querySelectorAll('.color-btn').forEach(btn => {
+        btn.classList.remove('border-4', 'border-gray-900', 'border-gray-300', 'ring-offset-2');
+        
+        const index = parseInt(btn.dataset.color, 10);
+        if (index === selectedIndex) {
+          // 選択状態のスタイルを適用
+          if (selectedIndex === 0) {
+            btn.classList.add('border-4', 'border-gray-300', 'ring-offset-2');
+          } else {
+            btn.classList.add('border-4', 'border-gray-900', 'ring-offset-2');
+          }
+        }
+      });
+    }
+
     // --- グリッド操作ロジック ---
 
     /**
@@ -201,6 +328,7 @@
     function renderGrid(size) {
       gridContainer.innerHTML = '';
       gridSize = size;
+      // グリッドの列数を設定
       gridContainer.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
 
       for (let i = 0; i < size * size; i++) {
@@ -214,9 +342,9 @@
     }
 
     /**
-     * セルを指定された色に設定する
+     * セルを指定された色インデックスに設定する
      * @param {HTMLElement} cell 操作対象のセル
-     * @param {number} colorIndex 設定する色 (0, 1, 2, 3)
+     * @param {number} colorIndex 設定する色インデックス (0, 1, 2, 3...)
      */
     function setCellColor(cell, colorIndex) {
       cell.dataset.color = colorIndex;
@@ -245,36 +373,11 @@
       showMessage('キャンバスをクリアしました。', 'info');
     });
 
-    // カラー選択ボタン
-    colorButtons.forEach(button => {
-      button.addEventListener('click', (e) => {
-        // drawStateを更新
-        drawState = parseInt(e.currentTarget.dataset.color, 10);
-
-        // 選択状態のスタイルを更新 (border-4を付与)
-        colorButtons.forEach(btn => btn.classList.remove('border-4', 'border-gray-900', 'ring-offset-2'));
-
-        // 色0は薄いグレーの枠線、その他は濃い枠線
-        if (drawState === 0) {
-          e.currentTarget.classList.add('border-4', 'border-gray-300', 'ring-offset-2');
-        } else {
-          e.currentTarget.classList.add('border-4', 'border-gray-900', 'ring-offset-2');
-        }
-
-        if (drawState === 0) {
-          showMessage('描画色を 色 0 (消しゴム) に設定しました。');
-        } else {
-          showMessage(`描画色を 色 ${drawState} に設定しました。`);
-        }
-      });
-    });
-
-
     // マウスダウン（描画開始）
     gridContainer.addEventListener('mousedown', (e) => {
       if (e.target.classList.contains('dot-cell')) {
         isDrawing = true;
-        // 現在選択されている色で描画を開始
+        // 現在選択されている色インデックスで描画を開始
         setCellColor(e.target, drawState);
       }
     });
@@ -287,7 +390,7 @@
     // マウスオーバー（ドラッグ描画）
     gridContainer.addEventListener('mouseover', (e) => {
       if (isDrawing && e.target.classList.contains('dot-cell')) {
-        // 現在選択されている色で描画を継続
+        // 現在選択されている色インデックスで描画を継続
         setCellColor(e.target, drawState);
       }
     });
@@ -324,8 +427,8 @@
     // --- 変換ロジック ---
 
     /**
-     * 現在のグリッドの状態を二次元配列（0, 1, 2, 3）に変換する
-     * @returns {number[][]} 二次元配列
+     * グリッドに保存されている色インデックスに対応するカスタム値を二次元配列に変換する
+     * @returns {Array} 二次元配列の各要素はカスタム値（数値または文字列）
      */
     function convertGridToArray() {
       const cells = document.querySelectorAll('.dot-cell');
@@ -337,8 +440,21 @@
           const index = i * gridSize + j;
           const cell = cells[index];
 
-          // data-color属性から数値を取得
-          row.push(parseInt(cell.dataset.color, 10));
+          // data-color属性から色インデックス (0, 1, 2, 3...) を取得
+          const colorIndex = cell.dataset.color;
+          
+          // 色インデックスに対応するカスタムトークンを取得
+          let token = colorTokens[colorIndex];
+          
+          // tokenが数値かどうかをチェックし、そうでない場合は文字列として扱う
+          // isNaN(token) は 'A' のような文字列でも true を返す
+          // 数値かつ有限値の場合は、そのまま row に push 
+          if (typeof token === 'number') {
+            row.push(token);
+          } else {
+            // 文字列の場合は、出力時にクォーテーションで囲む
+            row.push(`${token}`);
+          }
         }
         result.push(row);
       }
@@ -350,7 +466,7 @@
       const array = convertGridToArray();
 
       // 新しいフォーマットロジック:
-      // 1. 各行(内部配列)を文字列化: "[1, 0, 1, 0, ...]" (数字間にスペースを入れ見やすくする)
+      // 1. 各行(内部配列)を文字列化: "[1, "A", 0, 2, ...]" (数字/文字列間にスペースを入れ見やすくする)
       // 2. それらをカンマと改行で結合: "[\n [row1], \n [row2], \n ... \n]"
       const rowStrings = array.map(row =>
         `[${row.join(', ')}]`
@@ -359,7 +475,7 @@
       const outputString = `[\n  ${rowStrings.join(',\n  ')}\n]`;
 
       arrayOutput.value = `const dotArt = ${outputString};`;
-      showMessage('ドット絵を二次元配列に変換しました！');
+      showMessage('ドット絵を二次元配列に変換しました！カスタム値が適用されています。');
     });
 
     // コピーボタン
@@ -382,8 +498,9 @@
     // 初期化
     document.addEventListener('DOMContentLoaded', () => {
       renderGrid(gridSize);
-      // 初期選択状態を設定（色1）
-      document.querySelector('.color-btn[data-color="1"]').classList.add('border-4', 'border-gray-900', 'ring-offset-2');
+      renderColorControls();
+      // drawStateの初期選択に合わせてスタイルを適用
+      updateColorButtonStyles(drawState);
     });
   </script>
 </body>
