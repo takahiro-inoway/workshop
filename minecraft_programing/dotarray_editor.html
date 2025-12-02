@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ドット絵配列ジェネレーター (マルチカラー)</title>
+  <!-- Tailwind CSSを読み込み -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* カスタムスタイル：ドットのグリッド */
+    .dot-grid {
+      display: grid;
+      border: 1px solid #374151;
+      /* グリッド全体の枠 */
+      user-select: none;
+      /* 選択を無効化 */
+      touch-action: none;
+      /* タッチ操作を滑らかに */
+      cursor: crosshair;
+    }
+
+    .dot-cell {
+      aspect-ratio: 1 / 1;
+      /* 正方形を維持 */
+      background-color: #f3f4f6;
+      /* 色0 (未描画)の基本色 */
+      transition: background-color 0.1s ease;
+      /* グリッド線 */
+      border: 1px solid #d1d5db;
+    }
+
+    /* data-color属性に基づいて背景色を設定 */
+
+    /* 色0: 消しゴム / 背景 (薄いグレー) */
+    .dot-cell[data-color="0"] {
+      background-color: #f3f4f6;
+    }
+
+    /* 色1: 黒 (デフォルト色) */
+    .dot-cell[data-color="1"] {
+      background-color: #1f2937;
+    }
+
+    /* 色2: 赤 */
+    .dot-cell[data-color="2"] {
+      background-color: #ef4444;
+    }
+
+    /* 色3: 青 */
+    .dot-cell[data-color="3"] {
+      background-color: #3b82f6;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen p-4 md:p-8 font-sans flex justify-center">
+
+  <div id="app" class="w-full max-w-4xl bg-white shadow-xl rounded-xl p-6 space-y-6">
+    <header class="text-center pb-4 border-b">
+      <h1 class="text-3xl font-bold text-gray-800">ドット絵配列ジェネレーター</h1>
+      <p class="text-gray-500 mt-1">グリッドをクリックしてマルチカラードット絵を作成し、二次元配列に変換します。</p>
+    </header>
+
+    <!-- コントロールパネル -->
+    <div class="flex flex-col space-y-4">
+      <!-- グリッドサイズ設定 -->
+      <div class="flex-grow flex items-center bg-gray-50 p-3 rounded-lg shadow-inner">
+        <label for="grid-size" class="text-sm font-medium text-gray-700 mr-3">サイズ (N x N):</label>
+        <input type="number" id="grid-size" value="8" min="4" max="32"
+          class="w-20 p-2 border border-gray-300 rounded-lg text-center focus:ring-blue-500 focus:border-blue-500" />
+        <button id="set-size-btn"
+          class="ml-3 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-150 shadow-md">
+          サイズ変更
+        </button>
+      </div>
+
+      <!-- カラー選択とクリアボタン -->
+      <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+        <!-- カラー選択 -->
+        <div class="flex-grow flex items-center bg-gray-50 p-3 rounded-lg shadow-inner">
+          <span class="text-sm font-medium text-gray-700 mr-3 whitespace-nowrap">現在の色:</span>
+          <div id="color-selector" class="flex space-x-2">
+            <!-- 色0: 消しゴム/背景 -->
+            <button data-color="0"
+              class="color-btn w-10 h-10 rounded-full focus:ring-4 focus:ring-offset-2 focus:ring-gray-300 transition duration-150"
+              style="background-color: #f3f4f6; border: 2px solid #ccc;" title="色0 (消しゴム)"></button>
+            <!-- 色1: 黒 -->
+            <button data-color="1"
+              class="color-btn w-10 h-10 bg-gray-900 rounded-full focus:ring-4 focus:ring-offset-2 focus:ring-gray-900 transition duration-150"
+              title="色1"></button>
+            <!-- 色2: 赤 -->
+            <button data-color="2"
+              class="color-btn w-10 h-10 bg-red-500 rounded-full focus:ring-4 focus:ring-offset-2 focus:ring-red-300 transition duration-150"
+              title="色2"></button>
+            <!-- 色3: 青 -->
+            <button data-color="3"
+              class="color-btn w-10 h-10 bg-blue-500 rounded-full focus:ring-4 focus:ring-offset-2 focus:ring-blue-300 transition duration-150"
+              title="色3"></button>
+          </div>
+        </div>
+
+        <!-- クリアボタン -->
+        <button id="clear-btn"
+          class="px-6 py-3 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition duration-150 shadow-md flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20"
+            fill="currentColor">
+            <path fill-rule="evenodd"
+              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+              clip-rule="evenodd" />
+          </svg>
+          クリア
+        </button>
+      </div>
+    </div>
+
+    <!-- メインエリア: ドット絵と変換ボタン -->
+    <div class="flex flex-col lg:flex-row lg:space-x-6 mt-6">
+
+      <!-- ドット絵キャンバス -->
+      <div class="lg:w-1/2 w-full mb-6 lg:mb-0">
+        <h2 class="text-xl font-semibold mb-3 text-gray-700">ドット絵を描く</h2>
+        <!-- グリッドコンテナ。ここでドット絵を描画 -->
+        <div id="dot-grid-container" class="dot-grid w-full shadow-lg rounded-lg overflow-hidden">
+          <!-- JavaScriptによってドットセルがここに挿入されます -->
+        </div>
+      </div>
+
+      <!-- 変換結果とボタン -->
+      <div class="lg:w-1/2 w-full space-y-4">
+        <button id="convert-btn"
+          class="w-full px-6 py-3 bg-green-600 text-white text-xl font-bold rounded-lg hover:bg-green-700 transition duration-150 shadow-lg transform hover:scale-[1.01] active:scale-[0.99]">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0l3-3m-3 3l3 3m7.418 4h.582m-15.356-2a8.001 8.001 0 0015.356-2m0 0l-3 3m3-3l-3-3" />
+          </svg>
+          配列に変換
+        </button>
+
+        <h2 class="text-xl font-semibold text-gray-700 pt-2">変換結果 (JavaScript配列)</h2>
+        <div class="relative">
+          <textarea id="array-output" rows="10" readonly
+            class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm resize-none"></textarea>
+          <button id="copy-btn"
+            class="absolute top-2 right-2 p-2 bg-blue-500 text-white rounded-lg text-xs hover:bg-blue-600 transition duration-150"
+            title="クリップボードにコピー">
+            コピー
+          </button>
+        </div>
+
+        <div id="message-box" class="hidden text-sm p-3 rounded-lg text-center transition duration-300" role="alert">
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // DOM要素の取得
+    const gridContainer = document.getElementById('dot-grid-container');
+    const gridSizeInput = document.getElementById('grid-size');
+    const setSizeBtn = document.getElementById('set-size-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const convertBtn = document.getElementById('convert-btn');
+    const arrayOutput = document.getElementById('array-output');
+    const copyBtn = document.getElementById('copy-btn');
+    const messageBox = document.getElementById('message-box');
+    const colorButtons = document.querySelectorAll('.color-btn');
+
+    let gridSize = parseInt(gridSizeInput.value, 10);
+    let isDrawing = false; // ドラッグ描画判定用
+    let drawState = 1;     // 描画モード (0:消しゴム, 1, 2, 3:色)
+
+    // メッセージボックスを表示する関数
+    function showMessage(text, type = 'success') {
+      messageBox.textContent = text;
+      messageBox.className = `block text-sm p-3 rounded-lg text-center mt-4 transition duration-300`;
+
+      if (type === 'success') {
+        messageBox.classList.add('bg-green-100', 'text-green-800');
+      } else if (type === 'error') {
+        messageBox.classList.add('bg-red-100', 'text-red-800');
+      } else {
+        messageBox.classList.add('bg-gray-100', 'text-gray-800');
+      }
+
+      // 3秒後にメッセージを非表示にする
+      setTimeout(() => {
+        messageBox.classList.add('hidden');
+        messageBox.className = `hidden text-sm p-3 rounded-lg text-center transition duration-300`;
+      }, 3000);
+    }
+
+    // --- グリッド操作ロジック ---
+
+    /**
+     * 指定されたサイズでグリッドを再描画する
+     * @param {number} size グリッドの辺の長さ
+     */
+    function renderGrid(size) {
+      gridContainer.innerHTML = '';
+      gridSize = size;
+      gridContainer.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+
+      for (let i = 0; i < size * size; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('dot-cell');
+        cell.dataset.index = i; // インデックスをデータ属性として保持
+        // 初期色を0に設定
+        cell.dataset.color = '0';
+        gridContainer.appendChild(cell);
+      }
+    }
+
+    /**
+     * セルを指定された色に設定する
+     * @param {HTMLElement} cell 操作対象のセル
+     * @param {number} colorIndex 設定する色 (0, 1, 2, 3)
+     */
+    function setCellColor(cell, colorIndex) {
+      cell.dataset.color = colorIndex;
+    }
+
+    // --- イベントハンドラ ---
+
+    // グリッドサイズ変更ボタン
+    setSizeBtn.addEventListener('click', () => {
+      const newSize = parseInt(gridSizeInput.value, 10);
+      if (newSize >= 4 && newSize <= 32) {
+        renderGrid(newSize);
+        showMessage(`グリッドサイズを ${newSize}x${newSize} に変更しました。`, 'info');
+      } else {
+        showMessage('サイズは4から32の間に設定してください。', 'error');
+      }
+    });
+
+    // クリアボタン
+    clearBtn.addEventListener('click', () => {
+      document.querySelectorAll('.dot-cell').forEach(cell => {
+        // すべてのセルを色0 (背景) に設定
+        cell.dataset.color = '0';
+      });
+      arrayOutput.value = '';
+      showMessage('キャンバスをクリアしました。', 'info');
+    });
+
+    // カラー選択ボタン
+    colorButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        // drawStateを更新
+        drawState = parseInt(e.currentTarget.dataset.color, 10);
+
+        // 選択状態のスタイルを更新 (border-4を付与)
+        colorButtons.forEach(btn => btn.classList.remove('border-4', 'border-gray-900', 'ring-offset-2'));
+
+        // 色0は薄いグレーの枠線、その他は濃い枠線
+        if (drawState === 0) {
+          e.currentTarget.classList.add('border-4', 'border-gray-300', 'ring-offset-2');
+        } else {
+          e.currentTarget.classList.add('border-4', 'border-gray-900', 'ring-offset-2');
+        }
+
+        if (drawState === 0) {
+          showMessage('描画色を 色 0 (消しゴム) に設定しました。');
+        } else {
+          showMessage(`描画色を 色 ${drawState} に設定しました。`);
+        }
+      });
+    });
+
+
+    // マウスダウン（描画開始）
+    gridContainer.addEventListener('mousedown', (e) => {
+      if (e.target.classList.contains('dot-cell')) {
+        isDrawing = true;
+        // 現在選択されている色で描画を開始
+        setCellColor(e.target, drawState);
+      }
+    });
+
+    // マウスアップ（描画終了）
+    document.addEventListener('mouseup', () => {
+      isDrawing = false;
+    });
+
+    // マウスオーバー（ドラッグ描画）
+    gridContainer.addEventListener('mouseover', (e) => {
+      if (isDrawing && e.target.classList.contains('dot-cell')) {
+        // 現在選択されている色で描画を継続
+        setCellColor(e.target, drawState);
+      }
+    });
+
+    // タッチ操作のサポート (タッチスタートで描画開始、ムーブで描画継続)
+    gridContainer.addEventListener('touchstart', (e) => {
+      e.preventDefault(); // スクロールを防ぐ
+      if (e.target.classList.contains('dot-cell')) {
+        isDrawing = true;
+        const touch = e.touches[0];
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (target && target.classList.contains('dot-cell')) {
+          setCellColor(target, drawState);
+        }
+      }
+    }, { passive: false });
+
+    gridContainer.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (isDrawing) {
+        const touch = e.touches[0];
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (target && target.classList.contains('dot-cell')) {
+          setCellColor(target, drawState);
+        }
+      }
+    }, { passive: false });
+
+    document.addEventListener('touchend', () => {
+      isDrawing = false;
+    });
+
+
+    // --- 変換ロジック ---
+
+    /**
+     * 現在のグリッドの状態を二次元配列（0, 1, 2, 3）に変換する
+     * @returns {number[][]} 二次元配列
+     */
+    function convertGridToArray() {
+      const cells = document.querySelectorAll('.dot-cell');
+      const result = [];
+
+      for (let i = 0; i < gridSize; i++) {
+        const row = [];
+        for (let j = 0; j < gridSize; j++) {
+          const index = i * gridSize + j;
+          const cell = cells[index];
+
+          // data-color属性から数値を取得
+          row.push(parseInt(cell.dataset.color, 10));
+        }
+        result.push(row);
+      }
+      return result;
+    }
+
+    // 配列に変換ボタン
+    convertBtn.addEventListener('click', () => {
+      const array = convertGridToArray();
+
+      // 新しいフォーマットロジック:
+      // 1. 各行(内部配列)を文字列化: "[1, 0, 1, 0, ...]" (数字間にスペースを入れ見やすくする)
+      // 2. それらをカンマと改行で結合: "[\n [row1], \n [row2], \n ... \n]"
+      const rowStrings = array.map(row =>
+        `[${row.join(', ')}]`
+      );
+
+      const outputString = `[\n  ${rowStrings.join(',\n  ')}\n]`;
+
+      arrayOutput.value = `const dotArt = ${outputString};`;
+      showMessage('ドット絵を二次元配列に変換しました！');
+    });
+
+    // コピーボタン
+    copyBtn.addEventListener('click', () => {
+      if (arrayOutput.value) {
+        // document.execCommand('copy')を使用してクリップボードにコピー
+        arrayOutput.select();
+        try {
+          document.execCommand('copy');
+          showMessage('配列をクリップボードにコピーしました。');
+        } catch (err) {
+          console.error('コピー失敗:', err);
+          showMessage('コピーに失敗しました。手動でコピーしてください。', 'error');
+        }
+      } else {
+        showMessage('最初に「配列に変換」ボタンを押してください。', 'error');
+      }
+    });
+
+    // 初期化
+    document.addEventListener('DOMContentLoaded', () => {
+      renderGrid(gridSize);
+      // 初期選択状態を設定（色1）
+      document.querySelector('.color-btn[data-color="1"]').classList.add('border-4', 'border-gray-900', 'ring-offset-2');
+    });
+  </script>
+</body>
+
+</html>
