@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>平均値（Mean）アニメーション</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* カスタムスタイル: Noto Sansを優先 */
+    body {
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background-color: #f7f9fb;
+    }
+
+    canvas {
+      touch-action: none;
+      /* タッチ操作でのスクロールを防ぐ */
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-2xl bg-white shadow-xl rounded-xl p-6 md:p-8">
+    <h1 class="text-3xl font-extrabold text-gray-800 mb-2 text-center">平均値 (Mean) の視覚化</h1>
+    <p class="text-gray-600 mb-6 text-center">
+      グラフの形状を保ったまま、中央のピーク（平均値）が左右に移動する様子をご覧ください。
+    </p>
+
+    <!-- 平均値を示す値と説明を表示するエリア -->
+    <div id="mean-info" class="mb-6 p-3 bg-cyan-50 border-l-4 border-cyan-500 rounded-lg text-center">
+      <span class="text-lg font-bold text-cyan-700">平均値シミュレーション値: </span>
+      <span id="mean-value" class="text-2xl font-mono text-cyan-900">0.00</span>
+      <p id="mean-label" class="text-sm text-cyan-700 mt-1">中央（平均値 = 0）</p>
+    </div>
+
+    <!-- グラフ描画エリア -->
+    <div class="flex justify-center items-center bg-gray-50 border border-gray-200 rounded-lg">
+      <canvas id="meanCanvas" class="w-full h-96"></canvas>
+    </div>
+
+    <p class="text-xs text-gray-400 mt-4 text-center">
+      ※このアニメーションは、分布の標準偏差を一定に保ちながら平均値が変化する様子をシミュレーションしたものです。
+    </p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('meanCanvas');
+      const ctx = canvas.getContext('2d');
+      const meanValueDisplay = document.getElementById('mean-value');
+      const meanLabelDisplay = document.getElementById('mean-label');
+
+      let animationFrameId;
+      let lastTime = 0;
+
+      // グラフのパラメータ
+      const rangeX = 5; // X軸の描画範囲 (-rangeX から +rangeX)
+      const sigma = 0.8; // 標準偏差 (グラフの広がり、一定に保つ)
+      const max_mean_shift = 2.0; // 平均値の最大シフト量
+      const cycleDuration = 6000; // 6秒で往復 (左端 -> 右端 -> 左端)
+
+      // 正規分布のシミュレーション関数 (平均値をcurrent_meanとして受け取る)
+      // f(x) = exp(-0.5 * ((x - mean) / sigma)^2)
+      function distributionFunction(x, current_mean) {
+        const z = (x - current_mean) / sigma;
+        // ピークの高さは常に1.0
+        return Math.exp(-0.5 * z * z);
+      }
+
+      // Canvasサイズと描画エリアを更新する関数
+      function resizeCanvas() {
+        // 親要素のサイズに合わせる
+        const parent = canvas.parentElement;
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
+        draw(lastTime);
+      }
+
+      // 描画関数
+      function draw(time) {
+        // 時間経過に基づき、サインカーブで平均値を -max_mean_shift から +max_mean_shift の間で滑らかに変化させる
+        const normalizedTime = (time % cycleDuration) / cycleDuration;
+        // sinカーブは -1.0 から 1.0 の間を動く
+        const current_mean = max_mean_shift * Math.sin(normalizedTime * 2 * Math.PI);
+
+        // 平均値表示の更新
+        meanValueDisplay.textContent = current_mean.toFixed(2);
+
+        if (current_mean > 1.5) {
+          meanLabelDisplay.textContent = "正の方向にシフト (平均値 > 0)";
+        } else if (current_mean < -1.5) {
+          meanLabelDisplay.textContent = "負の方向にシフト (平均値 < 0)";
+        } else if (Math.abs(current_mean) < 0.1) {
+          meanLabelDisplay.textContent = "中央（平均値 $\\approx$ 0）";
+        } else {
+          meanLabelDisplay.textContent = "平均値が変化中";
+        }
+
+        // 1. Canvasをクリア
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 2. グラフの中心線と軸を描画
+        const centerY = canvas.height * 0.9;
+        const centerX = canvas.width / 2;
+        const scaleY = canvas.height * 0.8;
+        // X軸のスケール調整 (描画範囲 rangeX に合わせる)
+        const scaleX = canvas.width / (rangeX * 2.2);
+
+        ctx.strokeStyle = '#ccc';
+        ctx.lineWidth = 1;
+
+        // X軸 (基準線)
+        ctx.beginPath();
+        ctx.moveTo(0, centerY);
+        ctx.lineTo(canvas.width, centerY);
+        ctx.stroke();
+
+        // Y軸 (グラフの中心)
+        ctx.beginPath();
+        ctx.moveTo(centerX, 0);
+        ctx.lineTo(centerX, canvas.height);
+        ctx.stroke();
+
+        // 3. 曲線を描画
+        ctx.beginPath();
+        ctx.strokeStyle = '#06b6d4'; // シアン 600
+        ctx.lineWidth = 3;
+
+        const steps = canvas.width;
+
+        for (let px = 0; px <= steps; px++) {
+          // ピクセル座標をグラフのX値に変換
+          const x = (px - centerX) / scaleX;
+
+          // 現在の平均値を使ってy値を計算
+          let y = distributionFunction(x, current_mean);
+
+          // Y値をキャンバス座標に変換 (最大高さは常にピークy=1.0に合わせる)
+          const canvasY = centerY - y * scaleY;
+
+          if (px === 0) {
+            ctx.moveTo(px, canvasY);
+          } else {
+            ctx.lineTo(px, canvasY);
+          }
+        }
+        ctx.stroke();
+
+        // 4. 現在の平均値の位置にマーカーを描画
+        const meanXPos = centerX + current_mean * scaleX;
+        ctx.beginPath();
+        ctx.arc(meanXPos, centerY, 6, 0, 2 * Math.PI);
+        ctx.fillStyle = '#06b6d4';
+        ctx.fill();
+
+        ctx.strokeStyle = '#06b6d4';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]); // 破線
+        ctx.beginPath();
+        ctx.moveTo(meanXPos, centerY - scaleY);
+        ctx.lineTo(meanXPos, centerY);
+        ctx.stroke();
+        ctx.setLineDash([]); // 破線をリセット
+      }
+
+      // アニメーションループ
+      function animate(time) {
+        if (lastTime === 0) lastTime = time; // 初回実行時
+        draw(time);
+        lastTime = time;
+        animationFrameId = requestAnimationFrame(animate);
+      }
+
+      // 初期化とリスナー設定
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas(); // 初期描画
+
+      // アニメーション開始
+      animate(0);
+
+      // クリーンアップ (Canvas環境外では不要ですが、習慣として)
+      window.onbeforeunload = () => {
+        cancelAnimationFrame(animationFrameId);
+      };
+    });
+  </script>
+</body>
+
+</html>
