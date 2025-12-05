@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>最頻値（Mode）アニメーション</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* カスタムスタイル: Noto Sansを優先 */
+    body {
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+      background-color: #f7f9fb;
+    }
+
+    canvas {
+      touch-action: none;
+      /* タッチ操作でのスクロールを防ぐ */
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-2xl bg-white shadow-xl rounded-xl p-6 md:p-8">
+    <h1 class="text-3xl font-extrabold text-gray-800 mb-2 text-center">最頻値 (Mode) の視覚化</h1>
+    <p class="text-gray-600 mb-6 text-center">
+      分布が歪むと、最も頻度の高い値（ピーク）である最頻値が、平均値や中央値からどのように離れるかをご覧ください。
+    </p>
+
+    <!-- 最頻値を示す値と説明を表示するエリア -->
+    <div id="mode-info" class="mb-6 p-3 bg-emerald-50 border-l-4 border-emerald-500 rounded-lg text-center">
+      <span class="text-lg font-bold text-emerald-700">最頻値シミュレーション値: </span>
+      <span id="mode-value" class="text-2xl font-mono text-emerald-900">0.00</span>
+      <p id="mode-label" class="text-sm text-emerald-700 mt-1">左右対称（最頻値 $\approx$ 0）</p>
+    </div>
+
+    <!-- グラフ描画エリア -->
+    <div class="flex justify-center items-center bg-gray-50 border border-gray-200 rounded-lg">
+      <canvas id="modeCanvas" class="w-full h-96"></canvas>
+    </div>
+
+    <p class="text-xs text-gray-400 mt-4 text-center">
+      ※このアニメーションでは、平均値を $0$ に固定し、歪度によって最頻値と中央値を移動させています。
+    </p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('modeCanvas');
+      const ctx = canvas.getContext('2d');
+      const modeValueDisplay = document.getElementById('mode-value');
+      const modeLabelDisplay = document.getElementById('mode-label');
+
+      let animationFrameId;
+      let lastTime = 0;
+
+      // グラフのパラメータ
+      const rangeX = 4; // X軸の描画範囲 (-rangeX から +rangeX)
+      const sigma_base = 1.0; // 基本の分散パラメータ
+      const median_shift_factor = 0.7; // 歪度に対する中央値のシフト量係数
+
+      // 歪度をシミュレーションする関数 (左右非対称なガウス分布の近似)
+      function distributionFunction(x, current_skew) {
+        let sigma_scale;
+
+        // この関数では、current_skewを使って、左右で異なる分散（広がり）を持つガウス分布を合成します。
+        // これにより、歪んだ形状をシミュレーションします。
+
+        if (x >= 0) {
+          // 右側: 正の歪度 (>0) で伸長 (尾が長くなる)、負の歪度 (<0) で圧縮
+          sigma_scale = sigma_base * (1 + current_skew);
+        } else {
+          // 左側: 正の歪度 (>0) で圧縮、負の歪度 (<0) で伸長 (尾が長くなる)
+          sigma_scale = sigma_base * (1 - current_skew);
+        }
+
+        const z = x / sigma_scale;
+        return Math.exp(-0.5 * z * z);
+      }
+
+      // Canvasサイズと描画エリアを更新する関数
+      function resizeCanvas() {
+        const parent = canvas.parentElement;
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
+        draw(lastTime);
+      }
+
+      // 描画関数
+      function draw(time) {
+        // アニメーションサイクルを計算
+        const cycleDuration = 6000; // 6秒で「対称 -> 正 -> 対称 -> 負 -> 対称」を一周
+        const phaseDuration = cycleDuration / 4;
+        const normalizedTime = time % cycleDuration;
+
+        let current_skew;
+        let phase = Math.floor(normalizedTime / phaseDuration);
+        let phaseProgress = (normalizedTime % phaseDuration) / phaseDuration;
+
+        const skew_max = 0.5; // シミュレーションで使う歪度の最大値
+
+        // 4段階のアニメーション: 0 -> Max_Pos -> 0 -> Max_Neg -> 0
+        if (phase === 0) {
+          current_skew = skew_max * phaseProgress;
+        } else if (phase === 1) {
+          current_skew = skew_max * (1 - phaseProgress);
+        } else if (phase === 2) {
+          current_skew = -skew_max * phaseProgress;
+        } else { // phase === 3
+          current_skew = -skew_max * (1 - phaseProgress);
+        }
+
+        // 統計量の位置を計算 (Mean=0 固定)
+        const mean_position = 0;
+
+        // 中央値の位置 (歪度と反対方向にシフト)
+        const median_position = -current_skew * median_shift_factor;
+
+        // 最頻値の位置 (Mode, 経験則: Mode ≈ 3*Median - 2*Mean)
+        // Mean=0なので Mode ≈ 3*Median
+        const mode_position = 3 * median_position;
+
+        // 最頻値表示の更新
+        const displayedMode = mode_position * 1.5; // 表示上のスケールを調整
+        modeValueDisplay.textContent = displayedMode.toFixed(2);
+
+        if (current_skew > 0.4) {
+          modeLabelDisplay.textContent = "正の歪度: 最頻値は左へ移動（Mode < Median < Mean）";
+        } else if (current_skew < -0.4) {
+          modeLabelDisplay.textContent = "負の歪度: 最頻値は右へ移動（Mean < Median < Mode）";
+        } else if (Math.abs(current_skew) < 0.05) {
+          modeLabelDisplay.textContent = "左右対称（Mode $\\approx$ 0）";
+        } else {
+          modeLabelDisplay.textContent = "最頻値が変化中";
+        }
+
+
+        // 1. Canvasをクリア
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 2. グラフの中心線と軸を描画
+        const centerY = canvas.height * 0.9;
+        const centerX = canvas.width / 2;
+        const scaleY = canvas.height * 0.8;
+        const scaleX = canvas.width / (rangeX * 2.2);
+
+        ctx.strokeStyle = '#ccc';
+        ctx.lineWidth = 1;
+
+        // X軸 (基準線)
+        ctx.beginPath();
+        ctx.moveTo(0, centerY);
+        ctx.lineTo(canvas.width, centerY);
+        ctx.stroke();
+
+        // Y軸 (グラフの中心)
+        ctx.beginPath();
+        ctx.moveTo(centerX, 0);
+        ctx.lineTo(centerX, canvas.height);
+        ctx.stroke();
+
+        // 3. 曲線を描画
+        ctx.beginPath();
+        ctx.strokeStyle = '#10b981'; // エメラルド 600
+        ctx.lineWidth = 3;
+
+        const steps = canvas.width;
+
+        for (let px = 0; px <= steps; px++) {
+          const x = (px - centerX) / scaleX;
+
+          let y = distributionFunction(x, current_skew);
+
+          const canvasY = centerY - y * scaleY;
+
+          if (px === 0) {
+            ctx.moveTo(px, canvasY);
+          } else {
+            ctx.lineTo(px, canvasY);
+          }
+        }
+        ctx.stroke();
+
+
+        // 4. 統計量のマーカーを描画
+        const markers = [
+          // Mode (最頻値) - 強調表示
+          { value: mode_position, color: '#10b981', label: '最頻値', size: 8, isPrimary: true },
+          // Median (中央値) - 補助表示
+          { value: median_position, color: '#f59e0b', label: '中央値', size: 5, isPrimary: false },
+          // Mean (平均値) - 補助表示 (固定)
+          { value: mean_position, color: '#06b6d4', label: '平均値', size: 5, isPrimary: false }
+        ];
+
+        markers.forEach(marker => {
+          const markerXPos = centerX + marker.value * scaleX;
+
+          // 垂直線
+          ctx.strokeStyle = marker.color;
+          ctx.lineWidth = marker.isPrimary ? 3 : 1;
+          ctx.setLineDash(marker.isPrimary ? [] : [3, 3]); // 最頻値は実線、他は破線
+          ctx.beginPath();
+          ctx.moveTo(markerXPos, centerY - scaleY);
+          ctx.lineTo(markerXPos, centerY);
+          ctx.stroke();
+
+          // ピークの点
+          const markerYValue = distributionFunction(marker.value, current_skew);
+          const markerYPos = centerY - markerYValue * scaleY;
+
+          ctx.beginPath();
+          ctx.arc(markerXPos, markerYPos, marker.size, 0, 2 * Math.PI);
+          ctx.fillStyle = marker.color;
+          ctx.fill();
+
+          ctx.setLineDash([]); // 破線をリセット
+        });
+      }
+
+      // アニメーションループ
+      function animate(time) {
+        if (lastTime === 0) lastTime = time;
+        draw(time);
+        lastTime = time;
+        animationFrameId = requestAnimationFrame(animate);
+      }
+
+      // 初期化とリスナー設定
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+
+      // アニメーション開始
+      animate(0);
+
+      // クリーンアップ
+      window.onbeforeunload = () => {
+        cancelAnimationFrame(animationFrameId);
+      };
+    });
+  </script>
+</body>
+
+</html>
