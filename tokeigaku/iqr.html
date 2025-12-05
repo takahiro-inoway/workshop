@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>四分位範囲（IQR）と箱ひげ図</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* カスタムスタイル: Noto Sansを優先 */
+    body {
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+    }
+
+    canvas {
+      touch-action: none;
+      /* タッチ操作でのスクロールを防ぐ */
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-2xl bg-white shadow-xl rounded-xl p-6 md:p-8">
+    <h1 class="text-3xl font-extrabold text-gray-800 mb-2 text-center">四分位範囲 (IQR) を視覚化すると...？</h1>
+    <p class="text-gray-600 mb-6 text-center">
+      箱ひげ図を使って、データの中央のばらつき（IQR）と歪度の変化をご覧ください。
+    </p>
+
+    <!-- IQRを示す値と説明を表示するエリア -->
+    <div id="iqr-info" class="mb-6 p-3 bg-pink-50 border-l-4 border-pink-500 rounded-lg text-center">
+      <span class="text-lg font-bold text-pink-700">四分位範囲 シミュレーション値: </span>
+      <span id="iqr-value" class="text-2xl font-mono text-pink-900">1.00</span>
+      <p id="iqr-label" class="text-sm text-pink-700 mt-1">IQRが中程度で、左右対称</p>
+    </div>
+
+    <!-- グラフ描画エリア -->
+    <div class="flex justify-center items-center bg-gray-50 border border-gray-200 rounded-lg">
+      <canvas id="iqrCanvas" class="w-full h-96"></canvas>
+    </div>
+
+    <p class="text-xs text-gray-400 mt-4 text-center">
+      ※箱の長さが **IQR** (ばらつき)、中央線の位置が **歪度** (非対称性) を示します。
+    </p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('iqrCanvas');
+      const ctx = canvas.getContext('2d');
+      const iqrValueDisplay = document.getElementById('iqr-value');
+      const iqrLabelDisplay = document.getElementById('iqr-label');
+
+      let animationFrameId;
+      let lastTime = 0;
+
+      // グラフのパラメータ
+      const rangeX = 5; // X軸の描画範囲 (-rangeX から +rangeX)
+      const cycleDuration = 8000; // 8秒で一周
+
+      // アニメーションの制御範囲
+      const dispersion_min = 1.0; // 最小のIQRの幅
+      const dispersion_max = 3.0; // 最大のIQRの幅
+      const skew_max = 0.4; // 歪度の最大シフト
+
+      // Canvasサイズと描画エリアを更新する関数
+      function resizeCanvas() {
+        const parent = canvas.parentElement;
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
+        draw(lastTime);
+      }
+
+      // 描画関数
+      function draw(time) {
+        // 1. アニメーション変数の計算
+        const normalizedTime = (time % cycleDuration) / cycleDuration;
+
+        // 分散（箱の幅）を変化させる (サインカーブ)
+        const disp_wave = (Math.sin(normalizedTime * 2 * Math.PI) + 1) / 2;
+        const current_dispersion = dispersion_min + (dispersion_max - dispersion_min) * disp_wave;
+
+        // 歪度を変化させる (ノコギリ波に近い動きで「対称 -> 歪み -> 対称」を繰り返す)
+        let current_skew;
+        if (normalizedTime < 0.25) {
+          current_skew = 0; // 0.0 -> 0.25までを対称に保つ
+        } else if (normalizedTime < 0.5) {
+          current_skew = skew_max * (normalizedTime - 0.25) * 4; // 0.25 -> 0.5で正の歪みへ
+        } else if (normalizedTime < 0.75) {
+          current_skew = skew_max * (1 - (normalizedTime - 0.5) * 4); // 0.5 -> 0.75で対称へ戻る
+        } else {
+          current_skew = -skew_max * ((normalizedTime - 0.75) * 4); // 0.75 -> 1.0で負の歪みへ
+        }
+
+        // 2. 箱ひげ図の要素を計算
+
+        // Q1, Q3 の初期位置 (対称かつ分散のみ)
+        const base_Q1 = -current_dispersion / 2;
+        const base_Q3 = current_dispersion / 2;
+
+        // 中央値 (Q2) の位置 (中央値を skew_max でシフト)
+        const Q2_position = base_Q1 + current_dispersion * (0.5 + current_skew);
+
+        // Q1 と Q3 の位置 (Q2を基準に調整)
+        // Q1 と Q3 の位置自体は、Q2 の位置と IQR の合計幅を基準に決定します。
+        const Q1_position = Q2_position - current_dispersion * (0.5 + current_skew) + base_Q1 * (1 - Math.abs(current_skew));
+        const Q3_position = Q2_position + current_dispersion * (0.5 - current_skew) + base_Q3 * (1 - Math.abs(current_skew));
+
+        // 外れ値を除いたヒゲの端 (ここでは Q1/Q3 から一定幅で固定)
+        const whisker_length = current_dispersion * 0.7;
+        const Min_position = Q1_position - whisker_length * (1 + current_skew);
+        const Max_position = Q3_position + whisker_length * (1 - current_skew);
+
+        // 表示用の IQR (Q3 - Q1) を計算
+        const actual_iqr = Q3_position - Q1_position;
+
+        // 3. 表示の更新
+        iqrValueDisplay.textContent = actual_iqr.toFixed(2);
+
+        let labelText = '';
+        if (current_dispersion > 2.5) {
+          labelText += 'IQRが大きい（ばらつき大）';
+        } else if (current_dispersion < 1.5) {
+          labelText += 'IQRが小さい（ばらつき小）';
+        } else {
+          labelText += 'IQRが中程度';
+        }
+
+        if (current_skew > 0.2) {
+          labelText += ' | 正の歪度（右尾）';
+        } else if (current_skew < -0.2) {
+          labelText += ' | 負の歪度（左尾）';
+        } else {
+          labelText += ' | 左右対称';
+        }
+
+        iqrLabelDisplay.textContent = labelText;
+
+        // 4. Canvasをクリア
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 5. グラフのスケールと軸の設定
+        const plotY = canvas.height * 0.5; // 箱ひげ図の中心Y座標
+        const boxHeight = 40; // 箱の高さ
+        const centerX = canvas.width / 2;
+        const scaleX = canvas.width / (rangeX * 2.2); // X軸のスケール
+
+        ctx.strokeStyle = '#ccc';
+        ctx.lineWidth = 1;
+
+        // X軸 (基準線)
+        ctx.beginPath();
+        ctx.moveTo(0, plotY + 60);
+        ctx.lineTo(canvas.width, plotY + 60);
+        ctx.stroke();
+
+        // 6. 箱ひげ図の描画
+
+        // 描画用のピクセル座標に変換
+        const minX = centerX + Min_position * scaleX;
+        const q1X = centerX + Q1_position * scaleX;
+        const q2X = centerX + Q2_position * scaleX;
+        const q3X = centerX + Q3_position * scaleX;
+        const maxX = centerX + Max_position * scaleX;
+
+        // A. ひげ (Min - Q1, Q3 - Max)
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#db2777'; // ピンク 600
+
+        // 左ひげ (Min - Q1)
+        ctx.beginPath();
+        ctx.moveTo(minX, plotY);
+        ctx.lineTo(q1X, plotY);
+        ctx.stroke();
+
+        // 右ひげ (Q3 - Max)
+        ctx.beginPath();
+        ctx.moveTo(q3X, plotY);
+        ctx.lineTo(maxX, plotY);
+        ctx.stroke();
+
+        // B. 箱 (Q1 - Q3) - IQRの部分
+        ctx.fillStyle = 'rgba(219, 39, 119, 0.2)'; // 薄いピンク
+        ctx.fillRect(q1X, plotY - boxHeight / 2, q3X - q1X, boxHeight);
+        ctx.strokeStyle = '#db2777'; // ピンク 600
+        ctx.lineWidth = 2;
+        ctx.strokeRect(q1X, plotY - boxHeight / 2, q3X - q1X, boxHeight);
+
+        // C. 中央値 (Q2)
+        ctx.strokeStyle = '#db2777'; // ピンク 600
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(q2X, plotY - boxHeight / 2);
+        ctx.lineTo(q2X, plotY + boxHeight / 2);
+        ctx.stroke();
+
+        // D. 最小値/最大値のマーカー
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#db2777';
+
+        // Minマーカー
+        ctx.beginPath();
+        ctx.moveTo(minX, plotY - boxHeight / 4);
+        ctx.lineTo(minX, plotY + boxHeight / 4);
+        ctx.stroke();
+
+        // Maxマーカー
+        ctx.beginPath();
+        ctx.moveTo(maxX, plotY - boxHeight / 4);
+        ctx.lineTo(maxX, plotY + boxHeight / 4);
+        ctx.stroke();
+
+        // E. 統計量のラベル (視認性のため、下に固定値として描画)
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+
+        ctx.fillText('Min', minX, plotY + boxHeight / 2 + 30);
+        ctx.fillText('Q1', q1X, plotY + boxHeight / 2 + 30);
+        ctx.fillText('Q2 (Median)', q2X, plotY + boxHeight / 2 + 30);
+        ctx.fillText('Q3', q3X, plotY + boxHeight / 2 + 30);
+        ctx.fillText('Max', maxX, plotY + boxHeight / 2 + 30);
+      }
+
+      // アニメーションループ
+      function animate(time) {
+        if (lastTime === 0) lastTime = time;
+        draw(time);
+        lastTime = time;
+        animationFrameId = requestAnimationFrame(animate);
+      }
+
+      // 初期化とリスナー設定
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas();
+
+      // アニメーション開始
+      animate(0);
+
+      // クリーンアップ
+      window.onbeforeunload = () => {
+        cancelAnimationFrame(animationFrameId);
+      };
+    });
+  </script>
+</body>
+
+</html>
