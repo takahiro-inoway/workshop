@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>分散（Variance）アニメーション</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* カスタムスタイル: Noto Sansを優先 */
+    body {
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+    }
+
+    canvas {
+      touch-action: none;
+      /* タッチ操作でのスクロールを防ぐ */
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-2xl bg-white shadow-xl rounded-xl p-6 md:p-8">
+    <h1 class="text-3xl font-extrabold text-gray-800 mb-2 text-center">分散/標準偏差を視覚化すると...？</h1>
+    <p class="text-gray-600 mb-6 text-center">
+      平均値からのデータのばらつき（分散）が変化する様子をご覧ください。
+    </p>
+
+    <!-- 分散を示す値と説明を表示するエリア -->
+    <div id="variance-info" class="mb-6 p-3 bg-violet-50 border-l-4 border-violet-500 rounded-lg text-center">
+      <span class="text-lg font-bold text-violet-700">標準偏差 シミュレーション値: </span>
+      <span id="sigma-value" class="text-2xl font-mono text-violet-900">1.00</span>
+      <p id="variance-label" class="text-sm text-violet-700 mt-1">標準的なばらつき</p>
+    </div>
+
+    <!-- グラフ描画エリア -->
+    <div class="flex justify-center items-center bg-gray-50 border border-gray-200 rounded-lg">
+      <canvas id="varianceCanvas" class="w-full h-96"></canvas>
+    </div>
+
+    <p class="text-xs text-gray-400 mt-4 text-center">
+      ※このアニメーションは、正規分布における標準偏差（分散）の変化をシミュレーションしたものです。
+    </p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('varianceCanvas');
+      const ctx = canvas.getContext('2d');
+      const sigmaValueDisplay = document.getElementById('sigma-value');
+      const varianceLabelDisplay = document.getElementById('variance-label');
+
+      let animationFrameId;
+      let lastTime = 0;
+
+      // グラフのパラメータ
+      const rangeX = 4; // X軸の描画範囲 (-rangeX から +rangeX)
+      const mu = 0; // 平均値は 0 に固定
+      const sigma_min = 0.5; // 標準偏差の最小値
+      const sigma_max = 1.5; // 標準偏差の最大値
+      const cycleDuration = 4000; // 4秒で往復 (最小 -> 最大 -> 最小)
+
+      // 正規分布の確率密度関数 (面積を1に保つため、正規化定数も考慮)
+      // f(x) = (1 / (sigma * sqrt(2*pi))) * exp(-0.5 * ((x - mu) / sigma)^2)
+      function distributionFunction(x, current_sigma) {
+        // 正規化定数 (高さ調整)
+        const normalizer = 1 / (current_sigma * Math.sqrt(2 * Math.PI));
+        // 標準化 z = (x - mu) / sigma
+        const z = (x - mu) / current_sigma;
+
+        return normalizer * Math.exp(-0.5 * z * z);
+      }
+
+      // Canvasサイズと描画エリアを更新する関数
+      function resizeCanvas() {
+        const parent = canvas.parentElement;
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
+        draw(lastTime);
+      }
+
+      // 描画関数
+      function draw(time) {
+        // 時間経過に基づき、サインカーブで sigma を min から max の間で滑らかに変化させる
+        const normalizedTime = (time % cycleDuration) / cycleDuration;
+        // sinカーブを [0, 1] にマッピング
+        const wave = (Math.sin(normalizedTime * 2 * Math.PI) + 1) / 2;
+
+        // sigma を [sigma_min, sigma_max] の範囲で変化させる
+        const current_sigma = sigma_min + (sigma_max - sigma_min) * wave;
+
+        // 分散（標準偏差）表示の更新
+        sigmaValueDisplay.textContent = current_sigma.toFixed(2);
+
+        if (current_sigma < 0.7) {
+          varianceLabelDisplay.textContent = "ばらつきが小さい（データが集中）";
+        } else if (current_sigma > 1.3) {
+          varianceLabelDisplay.textContent = "ばらつきが大きい（データが分散）";
+        } else {
+          varianceLabelDisplay.textContent = "標準的なばらつき（$\sigma=1.0$ 付近）";
+        }
+
+        // 1. Canvasをクリア
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 2. グラフの中心線と軸を描画
+        const centerY = canvas.height * 0.9;
+        const centerX = canvas.width / 2;
+        // Y軸の描画スケール（最大の高さに合わせる）
+        // 最大高さは sigma_min の時: f(mu, sigma_min) = 1 / (sigma_min * sqrt(2*pi))
+        const max_y_value = 1 / (sigma_min * Math.sqrt(2 * Math.PI));
+        const scaleY = canvas.height * 0.8 / max_y_value;
+        // X軸のスケール調整 (描画範囲 rangeX に合わせる)
+        const scaleX = canvas.width / (rangeX * 2.2);
+
+        ctx.strokeStyle = '#ccc';
+        ctx.lineWidth = 1;
+
+        // X軸 (基準線)
+        ctx.beginPath();
+        ctx.moveTo(0, centerY);
+        ctx.lineTo(canvas.width, centerY);
+        ctx.stroke();
+
+        // Y軸 (平均値の位置)
+        ctx.beginPath();
+        ctx.moveTo(centerX, 0);
+        ctx.lineTo(centerX, canvas.height);
+        ctx.stroke();
+
+        // 3. 曲線を描画
+        ctx.beginPath();
+        ctx.strokeStyle = '#8b5cf6'; // バイオレット 500
+        ctx.lineWidth = 3;
+
+        const steps = canvas.width;
+
+        for (let px = 0; px <= steps; px++) {
+          // ピクセル座標をグラフのX値に変換
+          const x = (px - centerX) / scaleX;
+
+          // 現在の標準偏差を使ってy値を計算
+          let y = distributionFunction(x, current_sigma);
+
+          // Y値をキャンバス座標に変換
+          const canvasY = centerY - y * scaleY;
+
+          if (px === 0) {
+            ctx.moveTo(px, canvasY);
+          } else {
+            ctx.lineTo(px, canvasY);
+          }
+        }
+        ctx.stroke();
+
+        // 4. 平均値の位置にマーカーを描画
+        const meanXPos = centerX + mu * scaleX;
+        ctx.beginPath();
+        ctx.arc(meanXPos, centerY, 6, 0, 2 * Math.PI);
+        ctx.fillStyle = '#8b5cf6';
+        ctx.fill();
+
+        ctx.strokeStyle = '#8b5cf6';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]); // 破線
+        ctx.beginPath();
+        ctx.moveTo(meanXPos, centerY - scaleY);
+        ctx.lineTo(meanXPos, centerY);
+        ctx.stroke();
+        ctx.setLineDash([]); // 破線をリセット
+      }
+
+      // アニメーションループ
+      function animate(time) {
+        if (lastTime === 0) lastTime = time; // 初回実行時
+        draw(time);
+        lastTime = time;
+        animationFrameId = requestAnimationFrame(animate);
+      }
+
+      // 初期化とリスナー設定
+      window.addEventListener('resize', resizeCanvas);
+      resizeCanvas(); // 初期描画
+
+      // アニメーション開始
+      animate(0);
+
+      // クリーンアップ
+      window.onbeforeunload = () => {
+        cancelAnimationFrame(animationFrameId);
+      };
+    });
+  </script>
+</body>
+
+</html>
