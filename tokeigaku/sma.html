@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>単純移動平均 (SMA) の期間変化アニメーション</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* カスタムスタイル: Noto Sansを優先 */
+    body {
+      font-family: "Inter", "Noto Sans JP", sans-serif;
+    }
+
+    canvas {
+      touch-action: none;
+      /* タッチ操作でのスクロールを防ぐ */
+    }
+  </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-4xl bg-white shadow-xl rounded-xl p-6 md:p-8">
+    <h1 class="text-3xl font-extrabold text-gray-800 mb-2 text-center">移動平均線が設定期間によってどのように表現されるか</h1>
+    <p class="text-gray-600 mb-6 text-center">
+      5日、10日、15日の移動平均線の違い
+    </p>
+
+    <!-- ラベル表示エリア -->
+    <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg text-center h-20">
+      <span class="text-lg font-bold text-blue-700">現在の移動平均: </span>
+      <span id="ma-period-label" class="text-2xl font-mono text-blue-900">5日移動平均</span>
+      <p id="ma-description-label" class="text-sm text-blue-700 mt-1">短期移動平均は追従性が高いがノイズも反映しやすい</p>
+    </div>
+
+    <!-- 凡例エリア -->
+    <div id="legend-info" class="mb-4 flex justify-center gap-6 text-sm font-medium">
+      <div class="flex items-center">
+        <div class="w-4 h-1 mr-2 rounded-full" style="background-color: #1f2937;"></div>
+        <span>元の値の折れ線（ノイズあり）</span>
+      </div>
+      <div class="flex items-center">
+        <div class="w-4 h-1 mr-2 rounded-full" style="background-color: #10b981;"></div>
+        <span>移動平均線</span>
+      </div>
+    </div>
+
+    <!-- グラフ描画エリア -->
+    <div class="flex justify-center items-center bg-gray-50 border border-gray-200 rounded-lg">
+      <canvas id="maCanvas" class="w-full h-96"></canvas>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const canvas = document.getElementById('maCanvas');
+      const ctx = canvas.getContext('2d');
+      const periodLabel = document.getElementById('ma-period-label');
+      const descriptionLabel = document.getElementById('ma-description-label');
+
+      let animationFrameId;
+      let lastTime = 0;
+
+      // グラフのパラメータ
+      const numDataPoints = 80; // データの総数
+      const periods = [5, 10, 15]; // 移動平均の期間
+      const periodNames = ["5日移動平均", "10日移動平均", "15日移動平均"];
+      const periodDescriptions = [
+        "短期移動平均: ノイズを拾いやすく、元の値への追従性が高い。",
+        "中期移動平均: 追従性と平滑化のバランスが取れている。",
+        "長期移動平均: 非常に滑らかだが、元の値の変化に対する追従性は最も遅い。"
+      ];
+
+      const maColor = '#10b981'; // エメラルドグリーン 600
+      const rawDataColor = '#1f2937'; // グレー 800
+
+      // アニメーションのタイミング (ミリ秒)
+      const cycleDuration = 12000; // 1サイクルの合計時間 (12秒)
+      const holdTime = 3000; // 各期間を固定表示する時間 (3秒)
+      const transitionTime = 1000; // 期間を滑らかに切り替える時間 (1秒)
+      const totalCycleTimePerStep = holdTime + transitionTime; // 4000ms
+
+      let rawData = [];
+      let smaData = {}; // 期間ごとに計算されたSMAデータを格納
+      let minVal = Infinity;
+      let maxVal = -Infinity;
+
+      /**
+       * 架空の時系列データを生成する関数 (ノイズを含む)
+       */
+      function generateRawData() {
+        const data = [];
+        minVal = Infinity;
+        maxVal = -Infinity;
+
+        for (let i = 0; i < numDataPoints; i++) {
+          // トレンド、サイクル、ノイズを含む値を生成
+          let trend = 2.0 + i * 0.05;
+          let cycle = Math.sin(i / 10) * 1.5;
+          let noise = (Math.random() - 0.5) * 1.2;
+
+          let value = trend + cycle + noise;
+
+          data.push({ x: i, value: value });
+
+          minVal = Math.min(minVal, value);
+          maxVal = Math.max(maxVal, value);
+        }
+        rawData = data;
+      }
+
+      /**
+       * 単純移動平均 (SMA) を計算する関数
+       */
+      function calculateSMA(data, period) {
+        const sma = new Array(data.length).fill(null);
+        for (let i = 0; i < data.length; i++) {
+          if (i < period - 1) {
+            sma[i] = null;
+            continue;
+          }
+
+          let sum = 0;
+          for (let j = 0; j < period; j++) {
+            sum += data[i - j].value;
+          }
+          const avg = sum / period;
+          sma[i] = { x: data[i].x, value: avg };
+
+          minVal = Math.min(minVal, avg);
+          maxVal = Math.max(maxVal, avg);
+        }
+        return sma;
+      }
+
+      /**
+       * 全てのSMAデータを計算し、描画範囲を決定する関数
+       */
+      function calculateAllSMA() {
+        periods.forEach(period => {
+          smaData[period] = calculateSMA(rawData, period);
+        });
+
+        // 上下に少しマージンを追加
+        const margin = (maxVal - minVal) * 0.1;
+        minVal -= margin;
+        maxVal += margin;
+      }
+
+      /**
+       * Canvasサイズと描画エリアを更新する関数
+       */
+      function resizeCanvas() {
+        const parent = canvas.parentElement;
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
+        draw(lastTime);
+      }
+
+      /**
+       * 折れ線グラフを描画する関数
+       */
+      function drawLine(data, color, lineWidth, lineDash = []) {
+        const padding = 30;
+        const plotWidth = canvas.width - 2 * padding;
+        const plotHeight = canvas.height - 2 * padding;
+
+        // データ値をCanvas座標にスケーリング
+        const rangeY = maxVal - minVal;
+        const scaleX = plotWidth / (numDataPoints - 1);
+        const scaleY = plotHeight / rangeY;
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.setLineDash(lineDash);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+
+        let started = false;
+        data.forEach((point, i) => {
+          // nullデータ（期間不足などで計算できない箇所）はスキップし、線を切断
+          if (point === null) {
+            started = false;
+            return;
+          }
+
+          const canvasX = padding + point.x * scaleX;
+          const canvasY = padding + plotHeight - (point.value - minVal) * scaleY;
+
+          if (!started) {
+            ctx.moveTo(canvasX, canvasY);
+            started = true;
+          } else {
+            ctx.lineTo(canvasX, canvasY);
+          }
+        });
+
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      /**
+       * 移動平均線を補間して描画し、ラベルを更新する関数
+       */
+      function drawInterpolatedMA(currentTime) {
+        const timeInCycle = currentTime % cycleDuration;
+
+        // 現在のステップインデックス（0: 5MA, 1: 10MA, 2: 15MA）
+        const stepIndex = Math.floor(timeInCycle / totalCycleTimePerStep) % periods.length;
+        const segmentTime = timeInCycle % totalCycleTimePerStep; // ステップ内の経過時間
+
+        const periodIndex1 = stepIndex;
+        const periodIndex2 = (stepIndex + 1) % periods.length;
+
+        const period1 = periods[periodIndex1];
+        const period2 = periods[periodIndex2];
+
+        let alpha;
+
+        if (segmentTime < holdTime) {
+          // ホールド期間: SMA1の値を表示し、ラベルを更新
+          alpha = 0;
+          periodLabel.textContent = periodNames[periodIndex1];
+          descriptionLabel.textContent = periodDescriptions[periodIndex1];
+        } else {
+          // トランジション期間: SMA1からSMA2へ補間。ラベルはSMA1のまま維持。
+          alpha = (segmentTime - holdTime) / transitionTime; // 0から1へ
+        }
+
+
+        // 補間データポイントの生成
+        const sma1 = smaData[period1];
+        const sma2 = smaData[period2];
+        const interpolatedData = [];
+
+        for (let i = 0; i < numDataPoints; i++) {
+          const point1 = sma1[i];
+          const point2 = sma2[i];
+
+          // どちらか一方でもnull（期間不足）の場合は描画を中断（nullを挿入）
+          if (point1 === null || point2 === null) {
+            interpolatedData.push(null);
+          } else {
+            // 両方に値がある場合、線形補間
+            const interpolatedValue = point1.value * (1 - alpha) + point2.value * alpha;
+            interpolatedData.push({ x: i, value: interpolatedValue });
+          }
+        }
+
+        // 補間された移動平均線を描画
+        drawLine(interpolatedData, maColor, 3.5);
+      }
+
+      /**
+       * 描画関数
+       */
+      function draw(time) {
+        if (rawData.length === 0) {
+          generateRawData();
+          calculateAllSMA();
+        }
+        lastTime = time;
+
+        // 1. Canvasをクリア
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 2. 軸の描画 (シンプルに)
+        const padding = 30;
+        const plotHeight = canvas.height - 2 * padding;
+        const bottomY = padding + plotHeight;
+
+        // X軸 (時間軸)
+        ctx.strokeStyle = '#ccc';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(padding, bottomY);
+        ctx.lineTo(canvas.width - padding, bottomY);
+        ctx.stroke();
+
+        // 3. 元の値の折れ線 (Raw Data) を描画 - 破線で細く
+        drawLine(rawData, rawDataColor, 1.0, [3, 3]);
+
+        // 4. アニメーションする移動平均線を描画
+        drawInterpolatedMA(time);
+      }
+
+      // 初期化とリスナー設定
+      window.addEventListener('resize', resizeCanvas);
+
+      // データ生成と初期描画
+      generateRawData();
+      calculateAllSMA();
+      resizeCanvas();
+
+      // アニメーションループ
+      function animate(time) {
+        draw(time);
+        animationFrameId = requestAnimationFrame(animate);
+      }
+
+      // アニメーション開始
+      animate(0);
+
+      // クリーンアップ
+      window.onbeforeunload = () => {
+        cancelAnimationFrame(animationFrameId);
+      };
+    });
+  </script>
+</body>
+
+</html>
