@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>シグマ記号の展開アニメーション</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* フォント設定 */
+    :root {
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* bodyを中央寄せに */
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-color: #f7f7f9;
+      /* Light background */
+      padding: 2rem;
+    }
+
+    /* 共通スタイル - Sigma Index adjustment */
+    .sigma-index-bottom {
+      /* i=1 をシグマの下部に整列させるための微調整 */
+      transform: translateY(10px);
+      font-size: 1.4rem !important;
+      font-weight: bold;
+      /* フォントサイズも調整 */
+    }
+
+    .sigma-index-top {
+      /* 4 をシグマの上部に整列させるための微調整 */
+      font-size: 1.4rem !important;
+      font-weight: bold;
+    }
+
+    /* アニメーションエリアの基底スタイル - 600px x 600px に拡大 */
+    .animation-container {
+      width: 600px;
+      height: 600px;
+      background-color: #ffffff;
+      /* White background for clean math look */
+      border-radius: 16px;
+      /* 影を強調し、浮き上がったカードのように見せる */
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      padding: 30px;
+      /* パディングを増やす */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+      /* Subtle border */
+    }
+
+    /* 共通スタイル */
+    .sum-row {
+      display: flex;
+      align-items: center;
+      font-size: 1.8rem;
+      font-weight: bold;
+      min-height: 40px;
+      flex-wrap: wrap;
+      justify-content: center;
+      transition: transform 1.0s ease-in-out, opacity 1.0s ease-in-out;
+      margin-top: 50px;
+      /* Σエリアと展開エリアの間隔を広く空ける */
+    }
+
+    .sigma-symbol {
+      font-size: 5rem;
+      /* シグマ記号を大きく */
+      position: relative;
+      margin-right: 15px;
+      transition: color 0.5s, transform 0.5s, opacity 0.5s;
+    }
+
+    .final-result {
+      font-size: 3.5rem;
+      /* 結果を大きく */
+      font-weight: extrabold;
+      opacity: 0;
+      transition: opacity 1.0s, transform 0.5s;
+      padding: 0 10px;
+    }
+
+    /* 案1-A: 垂直分解とフロー の特定スタイル */
+    .flow-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      margin-bottom: 0;
+      transition: transform 1.0s ease-in-out;
+      /* シグマが上へ移動してもはみ出さないように、初期のpadding-topを広く確保 */
+      padding-top: 100px;
+    }
+
+    .flow-label {
+      /* ラベルのデザインを改善 */
+      background-color: #f0f9ff;
+      /* Sky 50 */
+      padding: 8px 16px;
+      border-radius: 9999px;
+      /* Pill shape */
+      border: 2px solid #3b82f6;
+      /* Blue 500 border */
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      font-size: 0.95rem;
+      color: #1d4ed8;
+      /* Blue 700 text */
+      font-weight: 600;
+      opacity: 0;
+      position: absolute;
+      z-index: 10;
+      /* 初期非表示時の位置を上に設定。アニメーション開始時に translateY(0) に移動する */
+      transform: translateY(-50px);
+      transition: all 0.5s;
+      white-space: nowrap;
+      min-width: 140px;
+      text-align: center;
+    }
+
+    .flow-element {
+      /* 展開項のデザインを改善 */
+      margin: 0 6px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background-color: #4f46e5;
+      /* Indigo 600 */
+      color: #ffffff;
+      /* White text for contrast */
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- タイトルを中央に配置 -->
+  <h1 class="text-3xl font-extrabold text-gray-800 mb-8 border-b-4 border-indigo-400 pb-2">シグマで考える2乗の総和</h1>
+
+  <!-- 案1-A のみを使用 -->
+  <div id="concept-a-container" class="animation-container">
+    <!-- flow-container -->
+    <div class="flow-container relative">
+      <div class="sigma-symbol text-indigo-700">
+        <!-- 上限: Orange/Yellow for differentiation -->
+        <span id="sigma-top-a" class="absolute top-0 right-0 sigma-index-top text-orange-500 opacity-0">4</span>
+        <!-- 下限: Red/Error for differentiation -->
+        <span id="sigma-bottom-a" class="absolute bottom-0 right-0 sigma-index-bottom text-red-600 opacity-0">i=1</span>
+        Σ
+      </div>
+      <!-- 計算項: Teal/Green for the core expression -->
+      <span id="sigma-expression-a" class="text-4xl font-extrabold text-teal-600">i²</span>
+
+      <!-- ラベル: topを 30px に設定 (変更なし) -->
+      <div id="label-upper-a" class="flow-label" style="top: 50px; left: 0px;">N：データの個数</div>
+      <!-- ラベル: bottomを -50px に設定 (変更なし) -->
+      <div id="label-lower-a" class="flow-label" style="bottom: -60px; left: 0px;">i=1：開始する数</div>
+      <!-- ラベル: topを 70px (30+40) に、rightを -10px (-50+40) に変更 -->
+      <div id="label-term-a" class="flow-label" style="top: 130px; right: -200px;">i²：各データの計算式</div>
+      <div id="label-info-a" class="flow-label" style="bottom: -140px; left: -100px;">つまり１～４までを2乗する総和なので･･･</div>
+    </div>
+
+    <!-- 展開エリア -->
+    <div id="expansion-area-a" class="sum-row" style="font-size: 1.8rem; min-height: 50px;">
+      <!-- 展開式がここに入る -->
+    </div>
+    <!-- 下部のスペース確保 -->
+    <div style="height: 30px;"></div>
+  </div>
+
+  <script>
+    // グローバルなユーティリティ
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    // 共通の計算データ (i=1 to 4, i^2)
+    const VALUES = [1, 4, 9, 16];
+    const TOTAL_SUM = 30;
+    const ANIMATION_SPEED = 50; // sleepの基本値
+    const REPEAT_DELAY_MS = 3000; // 繰り返しまでの待機時間 (3秒)
+
+    // -------------------------------------------------------------------
+    // 案1-A: 垂直分解とフロー の実行ロジック (処理は変えずにデザインを反映)
+    // -------------------------------------------------------------------
+
+    /**
+     * アニメーションの初期状態に要素をリセットします。
+     */
+    function resetAnimationElements() {
+      const sigmaTop = document.getElementById('sigma-top-a');
+      const sigmaBottom = document.getElementById('sigma-bottom-a');
+      const sigmaExp = document.getElementById('sigma-expression-a');
+      const labels = {
+        upper: document.getElementById('label-upper-a'),
+        lower: document.getElementById('label-lower-a'),
+        term: document.getElementById('label-term-a'),
+        info: document.getElementById('label-info-a'),
+      };
+      const expansionArea = document.getElementById('expansion-area-a');
+
+      // 1. Σ記号のインデックスを非表示にリセット
+      sigmaTop.style.opacity = 0;
+      sigmaBottom.style.opacity = 0;
+
+      // 2. ラベルを初期状態（非表示かつ上に移動）にリセット
+      for (const key in labels) {
+        if (labels[key]) {
+          labels[key].style.opacity = 0;
+          // ラベルの非表示時の位置を CSSと同期して -50px に更新
+          labels[key].style.transform = 'translateY(-50px)';
+        }
+      }
+
+      // 3. 展開エリアの内容をクリア
+      expansionArea.innerHTML = '';
+      expansionArea.style.opacity = 1; // 展開エリア自体は表示状態を維持
+    }
+
+    /**
+     * Σ記号の展開アニメーションを実行します。
+     */
+    async function runConceptA() {
+      const container = document.getElementById('concept-a-container');
+      const sigmaTop = document.getElementById('sigma-top-a');
+      const sigmaBottom = document.getElementById('sigma-bottom-a');
+      const sigmaExp = document.getElementById('sigma-expression-a');
+      const labels = {
+        upper: document.getElementById('label-upper-a'),
+        lower: document.getElementById('label-lower-a'),
+        term: document.getElementById('label-term-a'),
+        info: document.getElementById('label-info-a'),
+      };
+      const expansionArea = document.getElementById('expansion-area-a');
+
+      // 1. 各要素を強調表示 (フローアニメーション)
+      for (const key of ['upper', 'lower', 'term', 'info']) {
+        // 'upper' と 'lower' の時だけシグマのインデックスを可視化
+        const sigmaEl = key === 'upper' ? sigmaTop : (key === 'lower' ? sigmaBottom : sigmaExp);
+        const labelEl = labels[key];
+
+        // Σ記号の要素を可視化 (既に resetAnimationElements で非表示になっているため)
+        if (key === 'upper' || key === 'lower') {
+          sigmaEl.style.opacity = 1;
+        }
+
+        // ラベルを表示
+        labelEl.style.opacity = 1;
+        labelEl.style.transform = 'translateY(0)';
+
+        await sleep(2500);
+
+        // ラベルをフェードアウト
+        labelEl.style.opacity = 0;
+        // ラベルの非表示時の移動距離も CSSと同期して -50px に更新
+        labelEl.style.transform = 'translateY(-50px)';
+      }
+
+      // 2. Σ記号のインデックスをすべて表示したままにする
+      sigmaTop.style.opacity = 1;
+      sigmaBottom.style.opacity = 1;
+
+      // 3. 展開開始 (フローエレメント)
+      let currentSum = 0;
+      for (let i = 0; i < VALUES.length; i++) {
+        const value = VALUES[i];
+        currentSum += value;
+
+        const termEl = document.createElement('div');
+        // flow-elementクラスはCSSで更新済み
+        termEl.className = 'flow-element';
+        termEl.textContent = value;
+        expansionArea.appendChild(termEl);
+
+        await sleep(ANIMATION_SPEED);
+        termEl.style.opacity = 1;
+        termEl.style.transform = 'translateY(0)';
+
+        if (i < VALUES.length - 1) {
+          const plusEl = document.createElement('span');
+          // +記号のスタイルも調整 (濃いめのインディゴ)
+          plusEl.textContent = ' + ';
+          plusEl.className = 'text-indigo-700 font-extrabold mx-2';
+          expansionArea.appendChild(plusEl);
+        }
+
+        await sleep(800);
+      }
+
+      // 4. 総和の計算結果を表示
+      const equalsEl = document.createElement('span');
+      equalsEl.textContent = ' = ';
+      equalsEl.className = 'text-gray-600 font-bold mx-2';
+      expansionArea.appendChild(equalsEl);
+
+      const finalSumEl = document.createElement('div');
+      // final-resultクラスはCSSで更新済み (テキストカラーを赤系で強調)
+      finalSumEl.className = 'final-result text-pink-600';
+      finalSumEl.textContent = TOTAL_SUM;
+      expansionArea.appendChild(finalSumEl);
+
+      // final-resultのスタイル変更をCSSトランジションに任せるため、クラス追加後すぐにプロパティをセット
+      finalSumEl.style.opacity = 1;
+      finalSumEl.style.transform = 'scale(1.1)'; // 少し大きくスケールアップ
+    }
+
+
+    /**
+     * アニメーションを繰り返し実行するメインループ
+     */
+    async function startAnimationLoop() {
+      while (true) {
+        // 1. アニメーションをリセット
+        resetAnimationElements();
+
+        // 2. アニメーションを実行
+        await runConceptA();
+
+        // 3. 3秒待機
+        await sleep(REPEAT_DELAY_MS);
+      }
+    }
+
+
+    // ページロード後にアニメーションループを開始
+    window.onload = () => {
+      startAnimationLoop();
+    };
+
+  </script>
+</body>
+
+</html>
