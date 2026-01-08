@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Collision Detection Debugger</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background-color: #0f172a;
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', monospace, sans-serif;
+      overflow: hidden;
+      margin: 0;
+    }
+
+    canvas {
+      cursor: crosshair;
+      background-image:
+        radial-gradient(#1e293b 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .debug-panel {
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(8px);
+      border-left: 1px solid #334155;
+    }
+
+    .math-box {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+      padding: 8px;
+      margin-top: 4px;
+      font-size: 0.85rem;
+    }
+
+    .collision-true {
+      color: #f87171;
+      font-weight: bold;
+    }
+
+    .collision-false {
+      color: #4ade80;
+    }
+
+    .highlight-dist {
+      color: #60a5fa;
+    }
+
+    .highlight-radius {
+      color: #fbbf24;
+    }
+  </style>
+</head>
+
+<body class="flex h-screen w-screen">
+
+  <!-- Canvas Area -->
+  <div class="flex-grow relative h-full">
+    <canvas id="simCanvas"></canvas>
+    <div class="absolute top-4 left-4 pointer-events-none">
+      <h1 class="text-xl font-bold text-slate-400">COLLISION_SIMULATOR_V1.1</h1>
+      <p class="text-sm text-slate-500">Drag the red circle (Enemy) to test logic</p>
+    </div>
+  </div>
+
+  <!-- Debug Sidebar -->
+  <div class="w-96 debug-panel p-6 overflow-y-auto shrink-0">
+    <h2 class="text-sm font-bold uppercase tracking-widest text-slate-500 mb-6 border-b border-slate-700 pb-2">Inspector
+    </h2>
+
+    <!-- Base vs Enemy -->
+    <section class="mb-8">
+      <h3 class="text-blue-400 font-bold mb-2 flex items-center">
+        <span class="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+        Base Collision (Circle vs Circle)
+      </h3>
+      <div class="space-y-2">
+        <div class="flex justify-between text-xs"><span>PLAYER_RADIUS (r1):</span> <span id="val_p_r"></span></div>
+        <div class="flex justify-between text-xs"><span>ENEMY_RADIUS (r2):</span> <span id="val_e_r"></span></div>
+        <div class="flex justify-between text-xs"><span>Distance (dist):</span> <span id="val_dist"
+            class="highlight-dist font-bold"></span></div>
+
+        <div class="math-box">
+          <div class="text-[10px] text-slate-400 mb-1 italic">// Logic</div>
+          <code class="block">dist < (r1 + r2)</code>
+          <div id="calc_base" class="mt-1 text-sm"></div>
+        </div>
+        <div id="status_base" class="text-center p-2 rounded text-xs mt-2 uppercase tracking-tighter"></div>
+      </div>
+    </section>
+
+    <!-- Bullet vs Enemy -->
+    <section class="mb-8">
+      <h3 class="text-yellow-400 font-bold mb-2 flex items-center">
+        <span class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
+        Bullet Collision (Circle vs Circle)
+      </h3>
+      <div class="space-y-2">
+        <div class="flex justify-between text-xs"><span>BULLET_RADIUS (rb):</span> <span id="val_b_r"></span></div>
+        <div class="flex justify-between text-xs"><span>Distance (b_dist):</span> <span id="val_b_dist"
+            class="highlight-dist font-bold"></span></div>
+
+        <div class="math-box">
+          <div class="text-[10px] text-slate-400 mb-1 italic">// Logic (Updated to Circle vs Circle)</div>
+          <code class="block">b_dist < (rb + r2)</code>
+          <div id="calc_bullet" class="mt-1 text-sm"></div>
+        </div>
+        <div id="status_bullet" class="text-center p-2 rounded text-xs mt-2 uppercase tracking-tighter"></div>
+      </div>
+    </section>
+
+    <!-- Controls -->
+    <section class="border-t border-slate-800 pt-4 mt-8">
+      <h3 class="text-xs font-bold text-slate-500 mb-4 uppercase">Parameters</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="text-[10px] text-slate-400">PLAYER RADIUS</label>
+          <input type="range" id="param_pr" min="10" max="100" value="50"
+            class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-400">ENEMY RADIUS</label>
+          <input type="range" id="param_er" min="10" max="100" value="30"
+            class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-400">BULLET RADIUS</label>
+          <input type="range" id="param_br" min="2" max="50" value="10"
+            class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+        </div>
+        <div class="flex items-center gap-2 mt-4">
+          <input type="checkbox" id="param_show_lines" checked class="rounded bg-slate-700 border-none">
+          <label for="param_show_lines" class="text-xs text-slate-300 cursor-pointer">Show Distance Lines</label>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // State
+    let width, height;
+    const state = {
+      player: { x: 0, y: 0, r: 50 },
+      enemy: { x: 0, y: 0, r: 30 },
+      bullet: { x: 0, y: 0, r: 10 },
+      isDragging: false,
+      showLines: true
+    };
+
+    // UI Elements
+    const el = {
+      vpr: document.getElementById('val_p_r'),
+      ver: document.getElementById('val_e_r'),
+      vbr: document.getElementById('val_b_r'),
+      vdist: document.getElementById('val_dist'),
+      vbdist: document.getElementById('val_b_dist'),
+      calcBase: document.getElementById('calc_base'),
+      calcBullet: document.getElementById('calc_bullet'),
+      statusBase: document.getElementById('status_base'),
+      statusBullet: document.getElementById('status_bullet'),
+      paramPr: document.getElementById('param_pr'),
+      paramEr: document.getElementById('param_er'),
+      paramBr: document.getElementById('param_br'),
+      paramLines: document.getElementById('param_show_lines')
+    };
+
+    function resize() {
+      width = canvas.width = canvas.parentElement.clientWidth;
+      height = canvas.height = canvas.parentElement.clientHeight;
+      state.player.x = width / 2;
+      state.player.y = height / 2;
+      state.enemy.x = width / 2 + 150;
+      state.enemy.y = height / 2 - 100;
+      state.bullet.x = width / 4;
+      state.bullet.y = height / 4;
+    }
+
+    function init() {
+      window.addEventListener('resize', resize);
+      resize();
+
+      // Mouse Events
+      canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const dx = mx - state.enemy.x;
+        const dy = my - state.enemy.y;
+        if (Math.sqrt(dx * dx + dy * dy) < state.enemy.r) {
+          state.isDragging = true;
+        }
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (state.isDragging) {
+          const rect = canvas.getBoundingClientRect();
+          state.enemy.x = e.clientX - rect.left;
+          state.enemy.y = e.clientY - rect.top;
+        }
+      });
+
+      window.addEventListener('mouseup', () => state.isDragging = false);
+
+      // Params
+      el.paramPr.oninput = (e) => state.player.r = parseInt(e.target.value);
+      el.paramEr.oninput = (e) => state.enemy.r = parseInt(e.target.value);
+      el.paramBr.oninput = (e) => state.bullet.r = parseInt(e.target.value);
+      el.paramLines.onchange = (e) => state.showLines = e.target.checked;
+
+      requestAnimationFrame(update);
+    }
+
+    function drawCircle(x, y, r, color, stroke = false, dash = false) {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      if (dash) ctx.setLineDash([5, 5]);
+      else ctx.setLineDash([]);
+
+      if (stroke) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+    }
+
+    function drawLine(x1, y1, x2, y2, color, label = "") {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = color;
+      ctx.setLineDash([5, 5]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      if (label) {
+        ctx.fillStyle = color;
+        ctx.font = '10px monospace';
+        ctx.fillText(label, (x1 + x2) / 2 + 10, (y1 + y2) / 2);
+      }
+    }
+
+    function update() {
+      ctx.clearRect(0, 0, width, height);
+
+      // Calculations - Base (Circle vs Circle)
+      const dx = state.player.x - state.enemy.x;
+      const dy = state.player.y - state.enemy.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const isBaseColliding = dist < (state.player.r + state.enemy.r);
+
+      // Calculations - Bullet (Circle vs Circle)
+      const bdx = state.bullet.x - state.enemy.x;
+      const bdy = state.bullet.y - state.enemy.y;
+      const bdist = Math.sqrt(bdx * bdx + bdy * bdy);
+      const isBulletColliding = bdist < (state.bullet.r + state.enemy.r);
+
+      // Render
+      // 1. Base (Player)
+      drawCircle(state.player.x, state.player.y, state.player.r, 'rgba(59, 130, 246, 0.2)');
+      drawCircle(state.player.x, state.player.y, state.player.r, '#3b82f6', true);
+
+      // 2. Enemy
+      const enemyColor = isBaseColliding || isBulletColliding ? '#f87171' : '#ef4444';
+      drawCircle(state.enemy.x, state.enemy.y, state.enemy.r, enemyColor);
+      if (state.isDragging) {
+        drawCircle(state.enemy.x, state.enemy.y, state.enemy.r + 5, 'rgba(255,255,255,0.2)', true);
+      }
+
+      // 3. Bullet
+      drawCircle(state.bullet.x, state.bullet.y, state.bullet.r, 'rgba(251, 191, 36, 0.3)');
+      drawCircle(state.bullet.x, state.bullet.y, state.bullet.r, '#fbbf24', true);
+      drawCircle(state.bullet.x, state.bullet.y, 2, '#fbbf24'); // Center point
+
+      // 4. Debug Lines
+      if (state.showLines) {
+        drawLine(state.player.x, state.player.y, state.enemy.x, state.enemy.y, '#60a5fa', `dist: ${dist.toFixed(1)}`);
+        drawLine(state.bullet.x, state.bullet.y, state.enemy.x, state.enemy.y, '#fbbf24', `b_dist: ${bdist.toFixed(1)}`);
+      }
+
+      // Update UI
+      el.vpr.textContent = state.player.r;
+      el.ver.textContent = state.enemy.r;
+      el.vbr.textContent = state.bullet.r;
+      el.vdist.textContent = dist.toFixed(2);
+      el.vbdist.textContent = bdist.toFixed(2);
+
+      // Base Logic Display
+      const sumR = state.player.r + state.enemy.r;
+      el.calcBase.innerHTML = `<span class="${isBaseColliding ? 'collision-true' : 'collision-false'}">${dist.toFixed(1)} < ${sumR}</span>`;
+      el.statusBase.textContent = isBaseColliding ? "Collision Detected" : "Clear";
+      el.statusBase.style.backgroundColor = isBaseColliding ? "rgba(248, 113, 113, 0.2)" : "rgba(74, 222, 128, 0.1)";
+      el.statusBase.style.color = isBaseColliding ? "#f87171" : "#4ade80";
+
+      // Bullet Logic Display
+      const sumBR = state.bullet.r + state.enemy.r;
+      el.calcBullet.innerHTML = `<span class="${isBulletColliding ? 'collision-true' : 'collision-false'}">${bdist.toFixed(1)} < ${sumBR}</span>`;
+      el.statusBullet.textContent = isBulletColliding ? "Bullet Hit!" : "No Hit";
+      el.statusBullet.style.backgroundColor = isBulletColliding ? "rgba(251, 191, 36, 0.2)" : "rgba(74, 222, 128, 0.1)";
+      el.statusBullet.style.color = isBulletColliding ? "#fbbf24" : "#4ade80";
+
+      requestAnimationFrame(update);
+    }
+
+    window.onload = init;
+  </script>
+</body>
+
+</html>
