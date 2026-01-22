@@ -62,7 +62,7 @@
     <canvas id="simCanvas"></canvas>
     <div class="absolute top-4 left-4 pointer-events-none">
       <h1 class="text-xl font-bold text-slate-400">COLLISION_SIMULATOR_V1.1</h1>
-      <p class="text-sm text-slate-500">Drag the red circle (Enemy) to test logic</p>
+      <p class="text-sm text-slate-500">Drag any object (Player, Enemy, Bullet) to test logic</p>
     </div>
   </div>
 
@@ -146,10 +146,10 @@
     // State
     let width, height;
     const state = {
-      player: { x: 0, y: 0, r: 50 },
-      enemy: { x: 0, y: 0, r: 30 },
-      bullet: { x: 0, y: 0, r: 10 },
-      isDragging: false,
+      player: { x: 0, y: 0, r: 50, id: 'player' },
+      enemy: { x: 0, y: 0, r: 30, id: 'enemy' },
+      bullet: { x: 0, y: 0, r: 10, id: 'bullet' },
+      draggingTarget: null,
       showLines: true
     };
 
@@ -173,12 +173,15 @@
     function resize() {
       width = canvas.width = canvas.parentElement.clientWidth;
       height = canvas.height = canvas.parentElement.clientHeight;
-      state.player.x = width / 2;
-      state.player.y = height / 2;
-      state.enemy.x = width / 2 + 150;
-      state.enemy.y = height / 2 - 100;
-      state.bullet.x = width / 4;
-      state.bullet.y = height / 4;
+      // 初回配置
+      if (state.player.x === 0) {
+        state.player.x = width / 2;
+        state.player.y = height / 2;
+        state.enemy.x = width / 2 + 150;
+        state.enemy.y = height / 2 - 100;
+        state.bullet.x = width / 4;
+        state.bullet.y = height / 4;
+      }
     }
 
     function init() {
@@ -190,22 +193,28 @@
         const rect = canvas.getBoundingClientRect();
         const mx = e.clientX - rect.left;
         const my = e.clientY - rect.top;
-        const dx = mx - state.enemy.x;
-        const dy = my - state.enemy.y;
-        if (Math.sqrt(dx * dx + dy * dy) < state.enemy.r) {
-          state.isDragging = true;
+
+        // Check objects in order of priority (or simple loop)
+        const targets = [state.bullet, state.enemy, state.player];
+        for (const target of targets) {
+          const dx = mx - target.x;
+          const dy = my - target.y;
+          if (Math.sqrt(dx * dx + dy * dy) < target.r + 5) { // 少しマージンを持たせる
+            state.draggingTarget = target;
+            break;
+          }
         }
       });
 
       window.addEventListener('mousemove', (e) => {
-        if (state.isDragging) {
+        if (state.draggingTarget) {
           const rect = canvas.getBoundingClientRect();
-          state.enemy.x = e.clientX - rect.left;
-          state.enemy.y = e.clientY - rect.top;
+          state.draggingTarget.x = e.clientX - rect.left;
+          state.draggingTarget.y = e.clientY - rect.top;
         }
       });
 
-      window.addEventListener('mouseup', () => state.isDragging = false);
+      window.addEventListener('mouseup', () => state.draggingTarget = null);
 
       // Params
       el.paramPr.oninput = (e) => state.player.r = parseInt(e.target.value);
@@ -267,11 +276,14 @@
       // 1. Base (Player)
       drawCircle(state.player.x, state.player.y, state.player.r, 'rgba(59, 130, 246, 0.2)');
       drawCircle(state.player.x, state.player.y, state.player.r, '#3b82f6', true);
+      if (state.draggingTarget === state.player) {
+        drawCircle(state.player.x, state.player.y, state.player.r + 5, 'rgba(59, 130, 246, 0.3)', true);
+      }
 
       // 2. Enemy
       const enemyColor = isBaseColliding || isBulletColliding ? '#f87171' : '#ef4444';
       drawCircle(state.enemy.x, state.enemy.y, state.enemy.r, enemyColor);
-      if (state.isDragging) {
+      if (state.draggingTarget === state.enemy) {
         drawCircle(state.enemy.x, state.enemy.y, state.enemy.r + 5, 'rgba(255,255,255,0.2)', true);
       }
 
@@ -279,6 +291,9 @@
       drawCircle(state.bullet.x, state.bullet.y, state.bullet.r, 'rgba(251, 191, 36, 0.3)');
       drawCircle(state.bullet.x, state.bullet.y, state.bullet.r, '#fbbf24', true);
       drawCircle(state.bullet.x, state.bullet.y, 2, '#fbbf24'); // Center point
+      if (state.draggingTarget === state.bullet) {
+        drawCircle(state.bullet.x, state.bullet.y, state.bullet.r + 5, 'rgba(251, 191, 36, 0.4)', true);
+      }
 
       // 4. Debug Lines
       if (state.showLines) {
