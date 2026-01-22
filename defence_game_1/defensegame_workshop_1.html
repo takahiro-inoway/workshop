@@ -39,6 +39,21 @@
 
         <hr class="has-background-link">
 
+        <!-- 完成品 -->
+        <div class="mb-6">
+          <h2 class="title is-4 has-text-link">今回完成させるゲームを実際にプレイ</h2>
+
+          <div class="content has-text-black">
+            <p>今回はシンプルなディフェンスゲーム制作を通じて、ゲームプログラムの基本的な処理を学んでいきます</p>
+            <p>まずは実際にプレイしてみましょう！</p>
+          </div>
+
+          <iframe style="height: 640px; width: 100%;"
+            src="https://takahiro-inoway.github.io/workshop/defence_game_1/index.html"></iframe>
+
+        </div>
+
+        <hr class="has-background-link">
         <!-- 1. 振り返り -->
         <div class="columns is-vcentered mb-6">
           <div class="column is-7">
@@ -102,17 +117,44 @@
   &lt;meta charset="UTF-8"&gt;
   &lt;style&gt;
     /* 全体のレイアウト設定 */
-    body { margin: 0; overflow: hidden; background: #1a1a1a; font-family: sans-serif; }
-    canvas { display: block; }
-    
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #1a1a1a;
+      font-family: sans-serif;
+    }
+    canvas {
+      display: block;
+    }
     /* UI要素（スコア・メッセージ）の配置設定 */
-    #ui { position: absolute; top: 20px; left: 20px; color: white; pointer-events: none; }
-    #msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; text-align: center; display: none; }
-    button { pointer-events: auto; padding: 10px 20px; cursor: pointer; }
+    #ui {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: white;
+      pointer-events: none;
+    }
+    #msg {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      text-align: center; display: none;
+    }
+    button { 
+      pointer-events: auto;
+      padding: 10px 20px;
+      cursor: pointer;
+    }
   &lt;/style&gt;
 &lt;/head&gt;
 &lt;body&gt;
-  &lt;div id="ui"&gt;Score: &lt;span id="score"&gt;0&lt;/span&gt;&lt;/div&gt;
+  &lt;div id="ui"&gt;
+      &lt;div&gt;Score: &lt;span id="score"&gt;0&lt;/span&gt;&lt;/div&gt;
+      &lt;div&gt;Bullet Size: &lt;span id="bulletSize"&gt;5&lt;/span&gt;&lt;/div&gt;
+      &lt;div&gt;Bullet Speed: &lt;span id="bulletSpeed"&gt;5&lt;/span&gt;&lt;/div&gt;
+  &lt;/div&gt;
 
   &lt;div id="msg"&gt;
     &lt;h1&gt;GAME OVER&lt;/h1&gt;
