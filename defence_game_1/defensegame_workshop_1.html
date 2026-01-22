@@ -48,8 +48,11 @@
             <p>まずは実際にプレイしてみましょう！</p>
           </div>
 
-          <iframe style="height: 640px; width: 100%;"
+          <iframe style="height: 640px; width: 100%; border-radius: 24px;"
             src="https://takahiro-inoway.github.io/workshop/defence_game_1/index.html"></iframe>
+
+          <a class="button is-danger" target="_blank"
+            href="https://takahiro-inoway.github.io/workshop/defence_game_1/index.html">ゲームページはこちら</a>
 
         </div>
 
@@ -533,6 +536,26 @@ resetGame()
             <canvas id="canvas-collision" class="image is-square"></canvas>
           </div>
         </div>
+
+        <p>まず３パターン考えます。①はなれている、②くっついている、③重なっている</p>
+        <br>
+        <p>次に、円の半径を使ってそれらを表現してみます。</p>
+        <br>
+        <p><b>①はなれている　　→それぞれの円の半径を足した長さより、点と点の間の長さの方が「長い」状態</b></p>
+        <br>
+        <p><b>②くっついている　→それぞれの円の半径を足した長さと、点と点の間の長さが「全く同じ」状態</b></p>
+        <br>
+        <p><b>③重なっている　　→それぞれの円の半径を足した長さより、点と点の間の長さの方が「短い」状態</b></p>
+        <br>
+        <p>ということになります。</p>
+
+        <img style="width: 70%; border-radius: 24px;"
+          src="https://takahiro-inoway.github.io/workshop/defence_game_1/image_1.jpg"></img>
+        <br>
+        <a class="button is-danger" target="_blank"
+          href="https://takahiro-inoway.github.io/workshop/defence_game_1/simus.html">シミュレーターページはこちら</a>
+
+
         <div class="mb-6">
           <div class="content">
             <p><code>animate</code> 関数内の <code>bullets.forEach</code> のすぐ下に、敵の更新と衝突判定のコードを追加します。</p>
@@ -764,6 +787,9 @@ enemies.forEach((e, ei) => {
     const ENEMY_SPEED = 0.5;
     const BULLET_RADIUS = 30;
     const BULLET_SPEED = 5;</code></pre>
+
+        <a class="button is-danger" target="_blank"
+          href="https://takahiro-inoway.github.io/workshop/defence_game_1/index_2.html">アレンジ例（大きさ・速度などを変更）</a>
 
         <hr class="has-background-link">
 
