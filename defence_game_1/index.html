@@ -103,17 +103,6 @@
       setTimeout(spawnEnemy, Math.max(500, 2000 - score * 10));
     }
 
-    function resetGame() {
-      score = 0;
-      enemies = [];
-      bullets = [];
-      gameOver = false;
-      document.getElementById('score').textContent = score;
-      document.getElementById('msg').style.display = 'none';
-      spawnEnemy();
-      animate();
-    }
-
     function animate() {
       if (gameOver) return;
       requestAnimationFrame(animate);
@@ -182,6 +171,18 @@
           }
         });
       });
+    }
+
+
+    function resetGame() {
+      score = 0;
+      enemies = [];
+      bullets = [];
+      gameOver = false;
+      document.getElementById('score').textContent = score;
+      document.getElementById('msg').style.display = 'none';
+      spawnEnemy();
+      animate();
     }
 
     resetGame();
