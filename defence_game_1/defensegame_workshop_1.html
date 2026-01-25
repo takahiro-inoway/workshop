@@ -794,6 +794,77 @@ enemies.forEach((e, ei) => {
           href="https://takahiro-inoway.github.io/workshop/defence_game_1/index_2.html">アレンジ例（大きさ・速度などを変更）</a>
 
         <hr class="has-background-link">
+        <br>
+
+        <textarea style="width: 100%; height: 400px;">
+function spawnEnemy2() {
+  if (gameOver) return;
+  
+  // 画面の左端から右、あるいは右から左へ流れるように設定
+  const side = Math.random() > 0.5 ? -50 : canvas.width + 50;
+  const targetY = Math.random() * canvas.height;
+  
+  enemies2.push({
+    x: side,
+    y: Math.random() * canvas.height,
+    r: 15,
+    // 速度を固定（中央を目指さず、反対側へ向かう）
+    vx: (side < 0 ? 1 : -1) * (1 + Math.random() * 2), 
+    vy: (Math.random() - 0.5) * 2
+  });
+
+  // 1.5秒〜3.5秒おきに出現
+  setTimeout(spawnEnemy2, 1500 + Math.random() * 2000);
+}
+        </textarea>
+        <br>
+        <textarea style="width: 100%; height: 400px;">
+// --- enemies2の更新 ---
+enemies2.forEach((e, ei) => {
+  e.x += e.vx;
+  e.y += e.vy;
+
+  // 描画（色は区別するために黄色にしてみます）
+  ctx.beginPath();
+  ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffeb3b'; 
+  ctx.fill();
+
+  // 画面外に出たら削除
+  if (e.x < -100 || e.x > canvas.width + 100 || e.y < -100 || e.y > canvas.height + 100) {
+    enemies2.splice(ei, 1);
+  }
+
+  // 拠点（中央）との衝突判定
+  const dx = (canvas.width / 2) - e.x;
+  const dy = (canvas.height / 2) - e.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < PLAYER_RADIUS + e.r) {
+    gameOver = true;
+    document.getElementById('msg').style.display = 'block';
+  }
+
+  // 弾との衝突判定
+  bullets.forEach((b, bi) => {
+    const bdx = b.x - e.x;
+    const bdy = b.y - e.y;
+    const b_dist = Math.sqrt(bdx * bdx + bdy * bdy);
+    if (b_dist < BULLET_RADIUS + e.r) {
+      enemies2.splice(ei, 1);
+      bullets.splice(bi, 1);
+      score += 20; // 少し高いスコア
+      document.getElementById('score').textContent = score;
+    }
+  });
+});
+        </textarea>
+        <br>
+
+        <textarea style="width: 100%; height: 400px;">
+// resetGame内に追加
+spawnEnemy2();
+        </textarea>
+        <br>
 
         <footer class="footer has-background-white p-6 border-top">
           <div class="content has-text-centered">
