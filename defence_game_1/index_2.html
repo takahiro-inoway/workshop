@@ -51,7 +51,7 @@
   </div>
   <div id="msg">
     <h1 id="status">GAME OVER</h1>
-    <button onclick="resetGame()">Restart</button>
+    <button id="resetButton">Reset</button>
   </div>
   <canvas id="gameCanvas"></canvas>
 
@@ -194,6 +194,8 @@
     }
 
     resetGame();
+    document.getElementById('resetButton').addEventListener('click', resetGame)
+
   </script>
 </body>
 
