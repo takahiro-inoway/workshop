@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Physics tori</title>
+  <!-- Pico.css CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <!-- Matter.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
+</head>
+
+<body class="container">
+
+  <header>
+    <hgroup>
+      <h1>tobutori</h1>
+    </hgroup>
+  </header>
+
+  <main>
+    <div id="game-container"></div>
+    <button class="secondary" onclick="location.reload()">リセット</button>
+  </main>
+
+  <script src="workshop_1.js"></script>
+
+  <script>
+    // 背景を描画する
+    // 全体のサイズを指定
+    const width = 1200;
+    const height = 1400;
+    // ライブラリでレンダリングの準備
+    const render = Render.create({
+      element: document.getElementById('game-container'),
+      engine: engine,
+      options: { width, height, wireframes: false, background: '#f4f4f4' }
+    });
+
+    // ハコを描画する
+    // 1. デザインを考える
+    const size = 40;    // 箱のサイズ
+    const men_color = '#fb8c00';
+    const sen_color = '#ef6c00';
+    const futosa = 1;
+    // 2. ハコの配置を考える（0が空白、1が箱）
+    // 配列の上が実際の画面の上部、配列の下が画面の下部になります
+    const layout = [
+      [0, 0, 1, 0, 0], // 1段目（上）
+      [0, 0, 1, 0, 0], // 2段目
+      [0, 1, 1, 0, 0], // 3段目
+      [0, 1, 1, 1, 0], // 4段目
+      [1, 1, 1, 1, 1]  // 5段目（下）
+    ];
+    // 3.配置する位置を決める
+    const startX = 900; // 左端の基準座標
+    const startY = 600; // 上端の基準座標
+    // 4. レイアウト配列をループで回す
+    const hako = [];
+    layout.forEach((row, r) => {
+      row.forEach((cell, c) => {
+        // 値が 1 の場合のみオブジェクトを作成
+        if (cell !== 1) return
+        // ハコの配列に追加します
+        hako.push(Bodies.rectangle(
+          startX + c * size, startY + r * 45, size, size,
+          { render: { fillStyle: men_color, strokeStyle: sen_color, lineWidth: futosa } }
+        ));
+      });
+    });
+
+    // 地面を描画する
+    const j_x = 600;
+    const j_y = 1200;
+    const j_haba = 1200;
+    const j_takasa = 400;
+    const j_color = '#333';
+    // rectangle(x, y, width, height, [options]): 中心座標、幅、高さ、オプション
+    const jimen = Bodies.rectangle(
+      j_x, j_y, j_haba, j_takasa,
+      { isStatic: true, render: { fillStyle: j_color } }
+    );
+
+    // トリを描画する
+    const t_x = 200;
+    const t_y = 850;
+    const t_hankei = 15;
+    const t_color = '#e53935';
+    // circle(x, y, radius, [options]): 中心座標、半径、オプション(densityは密度)
+    let tori = Bodies.circle(
+      t_x, t_y, t_hankei,
+      { density: 0.002, render: { fillStyle: t_color } }
+    );
+
+    // バネで接続する
+    const bane = { x: 200, y: 850 };
+    // Constraint.create(options): 2点間(または体)を繋ぐ制約。stiffnessは剛性/硬さ
+    const b_color = '#333';
+    const b_chikara = 0.05;
+    const b_futosa = 2;
+    //
+    const gattai = Constraint.create({
+      pointA: bane,
+      bodyB: tori,
+      stiffness: b_chikara,
+      render: { strokeStyle: b_color, lineWidth: b_futosa }
+    });
+
+    // マウスにイベントを設定する
+    // Mouse.create(element): マウスイベントを取得する要素を指定
+    const mouse = Mouse.create(render.canvas);
+    // 発射フラグ用の変数を定義
+    let isFiring = false;
+    // MouseConstraint.create(engine, [options]): マウスで物体を操作するための制約
+    const mouseConstraint = MouseConstraint.create(engine, {
+      mouse: mouse,
+      constraint: { render: { visible: false } }
+    });
+    // マウスのドラッグ終了(手を放した)時に、鳥を掴んでいれば発射フラグをON
+    Events.on(mouseConstraint, 'enddrag', (e) => { if (e.body === tori) isFiring = true; });
+
+  </script>
+
+  <script src="workshop_2.js"></script>
+
+</body>
+
+</html>
