@@ -71,68 +71,8 @@
       });
     });
 
-    // 地面を描画する
-    const j_x = 600;
-    const j_y = 1200;
-    const j_haba = 1200;
-    const j_takasa = 400;
-    const j_color = '#333';
-    // rectangle(x, y, width, height, [options]): 中心座標、幅、高さ、オプション
-    const jimen = Bodies.rectangle(
-      j_x, j_y, j_haba, j_takasa,
-      { isStatic: true, render: { fillStyle: j_color } }
-    );
-
-    // トリを描画する
-    const t_x = 200;
-    const t_y = 850;
-    const t_hankei = 15;
-    const t_color = '#e53935';
-    // circle(x, y, radius, [options]): 中心座標、半径、オプション(densityは密度)
-    let tori = Bodies.circle(
-      t_x, t_y, t_hankei,
-      { density: 0.002, render: { fillStyle: t_color } }
-    );
-
-    // バネで接続する
-    const bane = { x: 200, y: 850 };
-    // Constraint.create(options): 2点間(または体)を繋ぐ制約。stiffnessは剛性/硬さ
-    const b_color = '#333';
-    const b_chikara = 0.05;
-    const b_futosa = 2;
-    //
-    const gattai = Constraint.create({
-      pointA: bane,
-      bodyB: tori,
-      stiffness: b_chikara,
-      render: { strokeStyle: b_color, lineWidth: b_futosa }
-    });
-
-    // マウスにイベントを設定する
-    // Mouse.create(element): マウスイベントを取得する要素を指定
-    const mouse = Mouse.create(render.canvas);
-    // 発射フラグ用の変数を定義
-    let isFiring = false;
-    // MouseConstraint.create(engine, [options]): マウスで物体を操作するための制約
-    const mouseConstraint = MouseConstraint.create(engine, {
-      mouse: mouse,
-      constraint: { render: { visible: false } }
-    });
-    // マウスのドラッグ終了(手を放した)時に、鳥を掴んでいれば発射フラグをON
-    Events.on(mouseConstraint, 'enddrag', (e) => { if (e.body === tori) isFiring = true; });
-
-    // エンジンの更新ごと(毎フレーム)に実行される処理
-    Events.on(engine, 'afterUpdate', () => {
-      // 発射中かつ鳥が発射点を越えたら、ゴムの制約を解除して自由に飛ばす
-      if (isFiring && tori.position.x > bane.x + 10) {
-        gattai.bodyB = null; // 接続を解除
-        gattai.render.visible = false;
-        isFiring = false;
-      }
-    });
-
     // 世界(world)に全ての物体(地面、鳥、バネ、マウス制約、箱の束)を追加
-    Composite.add(world, [jimen, tori, gattai, mouseConstraint, ...hako]);
+    Composite.add(world, [...hako]);
 
   </script>
 

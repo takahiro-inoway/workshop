@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Physics tori</title>
+  <!-- Pico.css CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <!-- Matter.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
+</head>
+
+<body class="container">
+
+  <header>
+    <hgroup>
+      <h1>tobutori</h1>
+    </hgroup>
+  </header>
+
+  <main>
+    <div id="game-container"></div>
+    <button class="secondary" onclick="location.reload()">リセット</button>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/gh/takahiro-inoway/workshop@main/birdgame_1/workshop_1.js"></script>
+
+  <script>
+    // 背景を描画する
+    // 全体のサイズを指定
+    const width = 1200;
+    const height = 1400;
+    // ライブラリでレンダリングの準備
+    const render = Render.create({
+      element: document.getElementById('game-container'),
+      engine: engine,
+      options: { width, height, wireframes: false, background: '#f4f4f4' }
+    });
+
+    // 世界(world)に全ての物体(地面、鳥、バネ、マウス制約、箱の束)を追加
+    Composite.add(world, []);
+
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/gh/takahiro-inoway/workshop@main/birdgame_1/workshop_2.js"></script>
+
+</body>
+
+</html>
