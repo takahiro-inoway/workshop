@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Texas Hold'em</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    *, *::before, *::after {
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      text-shadow: none !important;
+    }
+    body {
+      background-color: #05020a;
+      color: #f3e8ee;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+    }
+    .card-suit-red { color: #f43f5e; }
+    .card-suit-black { color: #1e1b2e; }
+  </style>
+</head>
+<body class="flex justify-center items-center min-h-screen bg-black p-0 m-0">
+
+  <div id="app" class="w-[390px] h-[700px] bg-gradient-to-b from-rose-950 via-purple-950 to-black border-2 border-rose-900/60 relative flex flex-col justify-between overflow-hidden text-xs">
+
+    <!-- CPU Header Grid (Height expanded) -->
+    <div class="grid grid-cols-3 gap-1 p-1.5 bg-black/70 border-b-2 border-rose-900/80">
+      <div v-for="(p, i) in cpus" :key="p.id" 
+           class="flex flex-col items-center p-1.5 border transition-colors min-h-[280px] justify-between" 
+           :class="[
+             winnerId === p.id ? 'border-amber-400 bg-amber-950/40 ring-1 ring-amber-400' :
+             (curTurn === i + 1 && phase !== 'SHOW' ? 'border-rose-400 bg-rose-950/50' : 'border-rose-900/40 bg-black/50')
+           ]">
+        
+        <!-- CPU Portrait -->
+        <div class="relative w-14 h-14 border border-pink-800/60 overflow-hidden bg-rose-950 shrink-0">
+          <img :src="p.avatar" class="w-full h-full object-cover grayscale contrast-125 hover:grayscale-0 transition-all" />
+          <div v-if="p.folded" class="absolute inset-0 bg-black/85 flex items-center justify-center text-rose-500 font-bold text-[14px]">FOLD</div>
+          <div v-if="winnerId === p.id" class="absolute top-0 right-0 bg-amber-500 text-black px-1 font-extrabold text-[8px]">WIN</div>
+        </div>
+
+        <!-- Name & Chips -->
+        <div class="text-center w-full mt-0.5">
+          <div class="font-bold text-[14px] text-pink-300 truncate w-full">{{ p.name }}</div>
+          <div class="text-amber-400 font-mono text-[14px] font-bold">${{ p.chips }}</div>
+        </div>
+
+        <!-- Erotic Speech Dialogue Box -->
+        <!--
+        <div class="text-[14px] text-pink-200/90 italic h-11 leading-tight flex items-center justify-center text-center my-0.5 px-0.5 bg-rose-950/30 border border-rose-900/30 w-full overflow-hidden">
+          "{{ p.msg }}"
+        </div>
+         -->
+
+        <!-- CPU Cards -->
+        <div class="flex gap-1 my-0.5">
+          <template v-if="phase === 'SHOW' && !p.folded">
+            <div v-for="cid in p.hand" :key="cid" class="w-8 h-11 bg-amber-50 border border-amber-200 flex flex-col items-center justify-center font-bold text-[14px]" :class="getCard(cid).isRed ? 'card-suit-red' : 'card-suit-black'">
+              <span>{{ getCard(cid).rank }}</span>
+              <span class="text-[20px] mt-1">{{ getCard(cid).suit }}</span>
+            </div>
+          </template>
+          <template v-else>
+            <div v-for="n in 2" :key="n" class="w-8 h-11 bg-rose-900 border border-rose-700 flex items-center justify-center text-rose-400 text-[8px]" :class="p.folded ? 'opacity-30' : ''">♠</div>
+          </template>
+        </div>
+
+        <!-- Action History Badge -->
+        <div class="w-full px-0.5 py-0.5 bg-rose-950/80 border border-rose-800/60 text-rose-300 font-bold text-[14px] text-center uppercase tracking-tight">
+          {{ p.lastAction || 'WAITING' }}
+        </div>
+
+        <!-- Total Bet Display -->
+        <div class="text-[14px] text-amber-300 font-mono text-center font-semibold">
+          BET: ${{ p.bet }}
+        </div>
+
+        <!-- Hand Rank Display at Showdown -->
+        <div v-if="phase === 'SHOW' && !p.folded" class="w-full text-[14px] font-bold text-amber-300 bg-purple-950 border border-amber-400/60 px-0.5 text-center truncate">
+          {{ getHandName(p) }}
+        </div>
+        <div v-else-if="phase === 'SHOW' && p.folded" class="w-full text-[14px] text-zinc-500 text-center">
+          -
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Center Field Area -->
+    <div class="flex-1 flex flex-col items-center justify-around p-2 relative">
+      <div class="w-full flex justify-between items-center px-4 py-1.5 bg-black/80 border-y border-pink-900/50">
+        <div class="text-pink-400 font-bold uppercase tracking-wider text-[14px]">POT</div>
+        <div class="text-amber-300 font-mono font-bold text-base">${{ pot }}</div>
+        <div class="text-rose-300/70 text-[14px]">CURRENT: ${{ currentBet }}</div>
+      </div>
+
+      <!-- Community Cards -->
+      <div class="flex justify-center gap-1.5 my-1">
+        <div v-for="(cid, idx) in community" :key="idx" class="w-11 h-16 bg-stone-100 border border-amber-300/60 flex flex-col justify-between p-1 font-bold text-xs" :class="getCard(cid).isRed ? 'card-suit-red' : 'card-suit-black'">
+          <div class="text-left text-[14px] leading-none">{{ getCard(cid).rank }}</div>
+          <div class="text-center text-base leading-none">{{ getCard(cid).suit }}</div>
+          <div class="text-right text-[14px] leading-none">{{ getCard(cid).rank }}</div>
+        </div>
+        <div v-for="n in (5 - community.length)" :key="'emp'+n" class="w-11 h-16 bg-rose-950/20 border border-rose-900/30 flex items-center justify-center text-rose-900/40 text-xs">♠</div>
+      </div>
+
+      <!-- Result Banner / Player Hand Status -->
+      <div class="text-center text-[14px] font-bold h-5 flex items-center justify-center px-2">
+        <span v-if="phase === 'SHOW' && winnerName" class="text-amber-300 bg-rose-950/90 border border-amber-400 px-2 py-0.5">
+          WINNER: {{ winnerName }}!
+        </span>
+        <span v-else class="text-pink-300/90 italic">
+          {{ pHandDesc }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Player Bottom Controls -->
+    <div class="bg-black/90 border-t-2 border-rose-900/80 p-2.5 flex flex-col gap-1.5">
+      <div class="flex justify-between  px-1" :class="winnerId === player.id ? 'bg-amber-950/40 border border-amber-400 p-1' : ''">
+
+        <!-- Player Info & Stats -->
+        <div class="text-left flex flex-col justify-between w-[80px]">
+          <div class="text-amber-400 font-mono font-bold text-base">${{ player.chips }}</div>
+          <div class="text-[14px] text-pink-300 font-mono">BET: ${{ player.bet }}</div>
+        </div>
+
+        <!-- Player Cards -->
+        <div class="flex gap-1.5">
+          <div v-for="cid in player.hand" :key="cid" class="w-11 h-16 bg-amber-50 border-2 border-amber-300 flex flex-col justify-between p-1 font-bold text-xs" :class="getCard(cid).isRed ? 'card-suit-red' : 'card-suit-black'">
+            <div class="text-left leading-none">{{ getCard(cid).rank }}</div>
+            <div class="text-center text-base leading-none">{{ getCard(cid).suit }}</div>
+            <div class="text-right leading-none">{{ getCard(cid).rank }}</div>
+          </div>
+          <div v-if="player.hand.length === 0" class="flex gap-1.5">
+            <div class="w-11 h-16 bg-rose-950/40 border border-rose-800 flex items-center justify-center text-rose-800">♠</div>
+            <div class="w-11 h-16 bg-rose-950/40 border border-rose-800 flex items-center justify-center text-rose-800">♠</div>
+          </div>
+        </div>
+
+        <!-- Player Info & Stats -->
+        <div class="text-right flex flex-col justify-between w-[80px]">
+          <div class="text-[14px] font-bold text-rose-300 uppercase">
+            ACTION:<br>
+            {{ player.lastAction || '---' }}
+          </div>
+          <div v-if="phase === 'SHOW' && !player.folded" class="text-[14px] font-bold text-amber-300 bg-purple-950 border border-amber-400 px-1 mt-0.5">
+            {{ getHandName(player) }}
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action Buttons -->
+      <div v-if="phase !== 'INIT' && phase !== 'SHOW'" class="grid grid-cols-3 gap-1.5 mt-1">
+        <button @click="act('fold')" :disabled="curTurn !== 0 || player.folded || isProcessing" class="h-[70px] py-2.5 bg-zinc-900 text-rose-400 font-bold border border-rose-900/60 hover:bg-rose-950 active:bg-rose-900 disabled:opacity-30">FOLD</button>
+        <button @click="act('call')" :disabled="curTurn !== 0 || player.folded || isProcessing" class="h-[70px] py-2.5 bg-rose-950 text-pink-200 font-bold border border-rose-700 hover:bg-rose-900 active:bg-pink-900 disabled:opacity-30">
+          {{ currentBet > player.bet ? 'CALL $' + Math.min(currentBet - player.bet, player.chips) : 'CHECK' }}
+        </button>
+        <button @click="act('raise')" :disabled="curTurn !== 0 || player.folded || isProcessing || player.chips <= (currentBet - player.bet)" class="py-2.5 bg-gradient-to-r from-rose-800 to-purple-800 text-amber-200 font-bold border border-rose-500 hover:brightness-125 active:brightness-90 disabled:opacity-30">RAISE</button>
+      </div>
+
+      <div v-else class="mt-1">
+        <button @click="startHand" class="h-[70px] w-full py-3 bg-gradient-to-r from-rose-700 via-pink-700 to-purple-800 text-amber-200 font-bold text-sm tracking-wider border border-amber-400/60 hover:brightness-110 active:scale-[0.99]">
+          {{ phase === 'INIT' ? 'DEAL HAND' : 'NEXT HAND' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp, ref } = Vue;
+
+    createApp({
+      setup() {
+        const suits = ['♠', '♥', '♦', '♣'];
+        const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+
+        const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+        const cpus = ref([
+          {
+            id: 1, name: 'リア', chips: 1000, bet: 0, hand: [], folded: false, acted: false, lastAction: '',
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+            msg: '焦らないで…♡',
+            dialogues: {
+              call: [
+                '焦らないで…ゆっくり攻めて♡', '乗ってあげる…身体が熱いのお', 'あなたの視線、感じてるわ♡', 
+                'そんな強気な目で見つめないで…♡', 'ふふっ、どこまで本気で見せてくれるの？♡'
+              ],
+              raise: [
+                'もっと深く賭けて？後戻りできないわ♡', '私の奥まで奪い尽くせるかしら？', '激しく攻めるのも嫌いじゃないわ…♡',
+                '逃がさないわ…私のベッドまでついてきなさい♡', '熱くなってきたわ…限界まで跳ね上げてあげる♡'
+              ],
+              fold: [
+                'あぁん…一旦引いてあげるわ', '焦らし上手ね…ここは降りるわ♡', '無理はしない主義なの…♡',
+                'んっ…おあずけにするのも悪くないわね♡', '焦らされると余計に疼いちゃう…降りるわ♡'
+              ],
+              win: [
+                'ふふ、全部貰うわ♡私のベッドに招待してあげる…♡', '声も出ないほど負かしてあげたわね…快感♡',
+                'あなたのチップも心も、私がぜんぶ呑み込んであげたわ♡', '負けたお仕置き…私の部屋でたっぷり可愛がってあげる♡'
+              ],
+              lose: [
+                'あぁん…負けちゃった…お仕置きなら好きにして良いのよ？', '私のカラダで払うしかないかしら…♡',
+                '悔しい…こんなに濡らされて負けるなんて…♡', '激しすぎるわ…好きにして、あなたのものよ♡'
+              ]
+            }
+          },
+          {
+            id: 2, name: 'シルヴィア', chips: 1000, bet: 0, hand: [], folded: false, acted: false, lastAction: '',
+            avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+            msg: '全部呑み込むわ',
+            dialogues: {
+              call: [
+                '身も心も私のモノになりなさい', '怯えてるの？ゾクゾクするわ…♡', 'ついてきてあげる、感謝しなさい',
+                'まだ折れないかしら？もっと見せてみなさい', 'フン、この程度で勝ったつもり？'
+              ],
+              raise: [
+                'アンタのチップ、一粒残さず呑み込んであげる！', 'もっと絶望させてあげるわ！', 'ひざまずいて賭け金を追加しなさい！',
+                '許さない…もっと痛い目に遭わせてあげる！', '破滅の快感、教えてあげるわ！'
+              ],
+              fold: [
+                'チッ…くだらない手札ね、捨ててあげる', '調子に乗るんじゃないわよ…', 'ここは譲ってあげるわ',
+                'フン、今回は見逃してあげるわ', 'くだらない賭けには付き合わないわ'
+              ],
+              win: [
+                'ひざまずいて私を称えなさい！最高の快楽でしょ？♡', '惨めねぇ…全部失って私にひれ伏す気分はどう？♡',
+                'クスクス…私の足元で泣きながら乞い願いなさい！♡', '全て奪ったわ！アンタの身も心も私の完全な所有物よ♡'
+              ],
+              lose: [
+                '嘘でしょ…私が負けるなんて！身も心も疼いて悔しい…！', '調子に乗らないで！次は絶対ぐちゃぐちゃにしてあげる！',
+                'くっ…屈辱的だわ！私をこんなに乱暴に奪うなんて…！', 'あんたなんかに…！体がカッカして止まらないじゃないの…！'
+              ]
+            }
+          },
+          {
+            id: 3, name: 'ヴァネッサ', chips: 1000, bet: 0, hand: [], folded: false, acted: false, lastAction: '',
+            avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80',
+            msg: '逃げないでね♡',
+            dialogues: {
+              call: [
+                'ねぇ、どこ見てるの？チッブじゃなくて私？♡', '激しいの、嫌いじゃないよ…♡', 'もっと大胆に攻めてきてよ♡',
+                'あはっ♡つきあってあげる！', 'ドキドキしちゃう…ねぇもっと見つめて？♡'
+              ],
+              raise: [
+                'そんなに濡らしたいの？もっと賭けちゃお♡', 'あはっ♡壊れちゃうくらいベットするね！', 'ねぇ、全部賭けて私に溺れてよ♡',
+                'イキそうなくらいワクワクする！レイズしちゃう♡', 'もっと激しくいじめてあげるね♡'
+              ],
+              fold: [
+                'あ～ん、つれないなぁ…降りちゃう♡', 'ちょっとイジワルしすぎ！引くね♡', '無理なおねだりは嫌いだよ♡',
+                'んも～、今回はおあずけ！', 'そんなにいじめないでよぉ…降りるね♡'
+              ],
+              win: [
+                'あはっ♡ごちそうさま！私の魅力に溺れて破滅しちゃったね♪', '負けた子には甘～いご褒美をあ・げ・る♡',
+                '全部私のもの～♡今夜は朝まで離してあげないからね♪', 'ふふっ♡負けたお仕置き、何して遊ぼうか？♡'
+              ],
+              lose: [
+                'ひどい…そんなに激しく奪っていくなんて、濡れちゃう…♡', 'すっからかん♪でもこんなにゾクゾクするの初めて♡',
+                '負けちゃった～♡責任とって私をめちゃくちゃにして？♡', 'あはっ…全部奪われちゃった…身体まであげるね♡'
+              ]
+            }
+          }
+        ]);
+
+        const player = ref({ id: 0, chips: 1000, bet: 0, hand: [], folded: false, acted: false, lastAction: '' });
+        const community = ref([]);
+        const deck = ref([]);
+        const pot = ref(0);
+        const currentBet = ref(0);
+        const curTurn = ref(0); // 0: Player, 1: CPU1, 2: CPU2, 3: CPU3
+        const phase = ref('INIT');
+        const pHandDesc = ref('');
+        const isProcessing = ref(false);
+        const winnerId = ref(null);
+        const winnerName = ref('');
+
+        const getCard = (id) => ({
+          id,
+          suit: suits[Math.floor(id / 13)],
+          rank: ranks[id % 13],
+          val: (id % 13) + 2,
+          isRed: Math.floor(id / 13) === 1 || Math.floor(id / 13) === 2
+        });
+
+        const drawCard = () => {
+          const idx = Math.floor(Math.random() * deck.value.length);
+          return deck.value.splice(idx, 1)[0];
+        };
+
+        const getAllPlayers = () => [player.value, ...cpus.value];
+
+        const eval5 = (c) => {
+          const v = c.map(x => x.val).sort((a, b) => b - a);
+          const s = c.map(x => x.suit);
+          const flush = s.every(x => x === s[0]);
+          let straight = v[0] - v[4] === 4 && new Set(v).size === 5;
+          if (!straight && v[0] === 14 && v[1] === 5 && v[2] === 4 && v[3] === 3 && v[4] === 2) straight = true;
+
+          const counts = {};
+          v.forEach(x => counts[x] = (counts[x] || 0) + 1);
+          const pairs = Object.entries(counts)
+            .map(([val, cnt]) => ({ val: Number(val), cnt }))
+            .sort((a, b) => b.cnt - a.cnt || b.val - a.val);
+
+          if (flush && straight) return { rank: 8, val: v[0], name: 'ストレートフラッシュ' };
+          if (pairs[0].cnt === 4) return { rank: 7, val: pairs[0].val * 15 + pairs[1].val, name: 'フォーカード' };
+          if (pairs[0].cnt === 3 && pairs[1].cnt === 2) return { rank: 6, val: pairs[0].val * 15 + pairs[1].val, name: 'フルハウス' };
+          if (flush) return { rank: 5, val: v[0], name: 'フラッシュ' };
+          if (straight) return { rank: 4, val: v[0], name: 'ストレート' };
+          if (pairs[0].cnt === 3) return { rank: 3, val: pairs[0].val, name: 'スリーカード' };
+          if (pairs[0].cnt === 2 && pairs[1].cnt === 2) return { rank: 2, val: pairs[0].val * 15 + pairs[1].val, name: 'ツーペア' };
+          if (pairs[0].cnt === 2) return { rank: 1, val: pairs[0].val, name: 'ワンペア' };
+          return { rank: 0, val: v[0], name: 'ハイカード' };
+        };
+
+        const eval7 = (hCards, cCards) => {
+          const all = [...hCards, ...cCards].map(getCard);
+          if (all.length < 5) {
+            if (hCards.length < 2) return { score: 0, rank: 0, name: '' };
+            const c1 = getCard(hCards[0]), c2 = getCard(hCards[1]);
+            if (c1.val === c2.val) return { score: 10000 + c1.val, rank: 1, name: 'ポケットペア' };
+            return { score: Math.max(c1.val, c2.val), rank: 0, name: 'ハイカード' };
+          }
+          let best = { rank: -1, val: -1, name: '', score: -1 };
+          const comb = (arr, k, start = 0, cur = []) => {
+            if (cur.length === k) {
+              const res = eval5(cur);
+              const score = res.rank * 10000 + res.val;
+              if (score > best.score) best = { ...res, score };
+              return;
+            }
+            for (let i = start; i < arr.length; i++) comb(arr, k, i + 1, [...cur, arr[i]]);
+          };
+          comb(all, 5);
+          return best;
+        };
+
+        const getHandName = (p) => {
+          if (!p || !p.hand || p.hand.length < 2) return '';
+          return eval7(p.hand, community.value).name;
+        };
+
+        const startHand = () => {
+          deck.value = Array.from({ length: 52 }, (_, i) => i);
+          pot.value = 0;
+          community.value = [];
+          phase.value = 'PREFLOP';
+          winnerId.value = null;
+          winnerName.value = '';
+
+          player.value.hand = [drawCard(), drawCard()];
+          player.value.folded = false;
+          player.value.acted = false;
+          player.value.lastAction = 'SB $10';
+          player.value.bet = 10;
+          player.value.chips -= 10;
+
+          cpus.value.forEach((c, idx) => {
+            c.hand = [drawCard(), drawCard()];
+            c.folded = false;
+            c.acted = false;
+            c.bet = idx === 0 ? 20 : 0;
+            c.chips -= c.bet;
+            c.lastAction = idx === 0 ? 'BB $20' : 'WAITING';
+            c.msg = pickRandom(c.dialogues.call);
+          });
+
+          pot.value = 30;
+          currentBet.value = 20;
+          curTurn.value = 0;
+          isProcessing.value = false;
+          updatePHandDesc();
+        };
+
+        const updatePHandDesc = () => {
+          if (player.value.hand.length === 2) {
+            pHandDesc.value = eval7(player.value.hand, community.value).name;
+          }
+        };
+
+        const advanceTurn = () => {
+          const allPlayers = getAllPlayers();
+          const activePlayers = allPlayers.filter(p => !p.folded);
+
+          if (activePlayers.length <= 1) {
+            endHandSingleWinner(activePlayers[0]);
+            return;
+          }
+
+          const roundComplete = activePlayers.every(p => p.acted && p.bet === currentBet.value);
+
+          if (roundComplete) {
+            nextPhase();
+            return;
+          }
+
+          let nextTurn = (curTurn.value + 1) % 4;
+          while (allPlayers[nextTurn].folded) {
+            nextTurn = (nextTurn + 1) % 4;
+          }
+          curTurn.value = nextTurn;
+
+          if (curTurn.value !== 0) {
+            isProcessing.value = true;
+            setTimeout(cpuTurn, 550);
+          } else {
+            isProcessing.value = false;
+          }
+        };
+
+        const nextPhase = () => {
+          const allPlayers = getAllPlayers();
+          allPlayers.forEach(p => {
+            p.bet = 0;
+            p.acted = false;
+          });
+          currentBet.value = 0;
+
+          if (phase.value === 'PREFLOP') {
+            phase.value = 'FLOP';
+            community.value = [drawCard(), drawCard(), drawCard()];
+          } else if (phase.value === 'FLOP') {
+            phase.value = 'TURN';
+            community.value.push(drawCard());
+          } else if (phase.value === 'TURN') {
+            phase.value = 'RIVER';
+            community.value.push(drawCard());
+          } else if (phase.value === 'RIVER') {
+            showdown();
+            return;
+          }
+
+          updatePHandDesc();
+
+          let startTurn = 0;
+          while (allPlayers[startTurn].folded) {
+            startTurn = (startTurn + 1) % 4;
+          }
+          curTurn.value = startTurn;
+
+          if (curTurn.value !== 0) {
+            isProcessing.value = true;
+            setTimeout(cpuTurn, 550);
+          } else {
+            isProcessing.value = false;
+          }
+        };
+
+        const evaluateCpuHandIsBad = (cpu) => {
+          const handEval = eval7(cpu.hand, community.value);
+          const toCall = currentBet.value - cpu.bet;
+
+          if (toCall === 0) return false;
+
+          if (phase.value === 'PREFLOP') {
+            const c1 = getCard(cpu.hand[0]), c2 = getCard(cpu.hand[1]);
+            const isPair = c1.val === c2.val;
+            const maxVal = Math.max(c1.val, c2.val);
+            if (!isPair && maxVal < 10) return true;
+            if (!isPair && maxVal < 12 && toCall >= 40) return true;
+            return false;
+          } else {
+            if (handEval.rank === 0) return true; // High card only
+            if (handEval.rank === 1 && handEval.val < 8 && toCall >= 20) return true; // Weak pair facing bet
+          }
+          return false;
+        };
+
+        const cpuTurn = () => {
+          const cpu = cpus.value[curTurn.value - 1];
+          if (!cpu || cpu.folded) {
+            advanceTurn();
+            return;
+          }
+
+          const toCall = currentBet.value - cpu.bet;
+          const handEval = eval7(cpu.hand, community.value);
+          const isBad = evaluateCpuHandIsBad(cpu);
+
+          if (toCall === 0) {
+            if (handEval.rank >= 2 && Math.random() < 0.45 && cpu.chips >= 20) {
+              const raiseAmt = Math.min(20, cpu.chips);
+              cpu.chips -= raiseAmt;
+              cpu.bet += raiseAmt;
+              pot.value += raiseAmt;
+              currentBet.value = cpu.bet;
+              cpu.lastAction = `RAISE $${cpu.bet}`;
+              getAllPlayers().forEach(p => { if (p !== cpu && !p.folded) p.acted = false; });
+              cpu.acted = true;
+              cpu.msg = pickRandom(cpu.dialogues.raise);
+            } else {
+              cpu.acted = true;
+              cpu.lastAction = 'CHECK';
+              cpu.msg = pickRandom(cpu.dialogues.call);
+            }
+          } else {
+            // If hand is unfavorable ("部が悪い"), 50% chance to Fold
+            if (isBad) {
+              if (Math.random() < 0.5) {
+                cpu.folded = true;
+                cpu.acted = true;
+                cpu.lastAction = 'FOLD';
+                cpu.msg = pickRandom(cpu.dialogues.fold);
+              } else {
+                const diff = Math.min(toCall, cpu.chips);
+                cpu.chips -= diff;
+                cpu.bet += diff;
+                pot.value += diff;
+                cpu.acted = true;
+                cpu.lastAction = cpu.chips === 0 ? 'ALL-IN' : `CALL $${cpu.bet}`;
+                cpu.msg = pickRandom(cpu.dialogues.call);
+              }
+            } else {
+              // Favorable hand -> Call or Raise optimally
+              if (handEval.rank >= 2 && Math.random() < 0.4 && cpu.chips > toCall + 20) {
+                const raiseAmt = toCall + 20;
+                const diff = Math.min(raiseAmt, cpu.chips);
+                cpu.chips -= diff;
+                cpu.bet += diff;
+                pot.value += diff;
+                currentBet.value = cpu.bet;
+                cpu.lastAction = `RAISE $${cpu.bet}`;
+                getAllPlayers().forEach(p => { if (p !== cpu && !p.folded) p.acted = false; });
+                cpu.acted = true;
+                cpu.msg = pickRandom(cpu.dialogues.raise);
+              } else {
+                const diff = Math.min(toCall, cpu.chips);
+                cpu.chips -= diff;
+                cpu.bet += diff;
+                pot.value += diff;
+                cpu.acted = true;
+                cpu.lastAction = cpu.chips === 0 ? 'ALL-IN' : `CALL $${cpu.bet}`;
+                cpu.msg = pickRandom(cpu.dialogues.call);
+              }
+            }
+          }
+
+          advanceTurn();
+        };
+
+        const act = (action) => {
+          if (curTurn.value !== 0 || player.value.folded || isProcessing.value) return;
+
+          if (action === 'fold') {
+            player.value.folded = true;
+            player.value.acted = true;
+            player.value.lastAction = 'FOLD';
+          } else if (action === 'call') {
+            const diff = Math.min(currentBet.value - player.value.bet, player.value.chips);
+            player.value.chips -= diff;
+            player.value.bet += diff;
+            pot.value += diff;
+            player.value.acted = true;
+            player.value.lastAction = diff === 0 ? 'CHECK' : `CALL $${player.value.bet}`;
+          } else if (action === 'raise') {
+            const raiseAmt = 20;
+            const diff = Math.min((currentBet.value - player.value.bet) + raiseAmt, player.value.chips);
+            player.value.chips -= diff;
+            player.value.bet += diff;
+            pot.value += diff;
+            currentBet.value = player.value.bet;
+            player.value.lastAction = `RAISE $${player.value.bet}`;
+
+            getAllPlayers().forEach(p => {
+              if (p !== player.value && !p.folded) p.acted = false;
+            });
+            player.value.acted = true;
+          }
+
+          advanceTurn();
+        };
+
+        const applyEndGameMessages = (winner) => {
+          winnerId.value = winner.id;
+          winnerName.value = winner === player.value ? 'あなた' : winner.name;
+
+          cpus.value.forEach(cpu => {
+            if (cpu === winner) {
+              cpu.msg = pickRandom(cpu.dialogues.win);
+            } else {
+              cpu.msg = pickRandom(cpu.dialogues.lose);
+            }
+          });
+        };
+
+        const showdown = () => {
+          phase.value = 'SHOW';
+          isProcessing.value = false;
+          const candidates = [];
+
+          getAllPlayers().forEach(p => {
+            if (!p.folded) {
+              const evalRes = eval7(p.hand, community.value);
+              candidates.push({
+                p,
+                score: evalRes.score,
+                name: p === player.value ? 'あなた' : p.name
+              });
+            }
+          });
+
+          if (candidates.length > 0) {
+            candidates.sort((a, b) => b.score - a.score);
+            const winner = candidates[0].p;
+            winner.chips += pot.value;
+            applyEndGameMessages(winner);
+          }
+        };
+
+        const endHandSingleWinner = (winner) => {
+          phase.value = 'SHOW';
+          isProcessing.value = false;
+          winner.chips += pot.value;
+          applyEndGameMessages(winner);
+        };
+
+        return {
+          cpus, player, community, pot, currentBet, curTurn, phase, pHandDesc, isProcessing,
+          winnerId, winnerName, getCard, getHandName, startHand, act
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
